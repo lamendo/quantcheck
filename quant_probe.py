@@ -21,16 +21,14 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 HERE = Path(__file__).parent
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE / "results"
+PROBES = HERE / "probes"
 MODEL = "EleutherAI/pythia-160m"
 STEPS = [64000, 76000, 84000, 92000, 108000, 128000, 143000]
 
 
 def probe_texts():
-    import qwythos_extract as qx
-    catalog = {i["id"]: i for i in json.loads(
-        (HERE / "catalog.json").read_text(encoding="utf-8"))}
-    return [catalog[i]["prompt"] for i in qx.PICK] + [q for q, _ in qx.REASONING]
+    return json.loads((PROBES / "probe_de.json").read_text(encoding="utf-8"))
 
 
 PROBE_EN = [
@@ -58,7 +56,7 @@ PROBE_EN = [
 
 
 def probe_texts_en():
-    return PROBE_EN * 2
+    return json.loads((PROBES / "probe_en.json").read_text(encoding="utf-8"))
 
 
 def nll_on(model, tok, texts, dev):

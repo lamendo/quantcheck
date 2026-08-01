@@ -12,25 +12,20 @@ import subprocess
 from pathlib import Path
 
 HERE = Path(__file__).parent
-LLAMA = HERE.parent / "_tools" / "llama.cpp"
-BIN = LLAMA / "build" / "bin"
-WORK = Path(r"D:\mentis_artifacts\gguf_quant")
-ART = HERE.parent / "artifacts" / "topo_steering"
+import os
+BIN = Path(os.environ.get("QUANTCHECK_LLAMACPP_BIN", str(HERE / "llama.cpp" / "build" / "bin")))
+WORK = Path(os.environ.get("QUANTCHECK_GGUF_WORKDIR", str(HERE / "results" / "gguf_work")))
+ART = HERE / "results"
 STEPS = [84000, 143000]
-PY = r"C:\mentis_ai\.venv_sense\Scripts\python.exe"
+import sys
+PY = sys.executable
+LLAMA = Path(os.environ.get("QUANTCHECK_LLAMACPP", str(HERE / "llama.cpp")))
 
 
 def probe_file():
-    import sys
-    sys.path.insert(0, str(HERE))
-    import qwythos_extract as qx
-    catalog = {i["id"]: i for i in json.loads(
-        (HERE / "catalog.json").read_text(encoding="utf-8"))}
-    texts = [catalog[i]["prompt"] for i in qx.PICK] + [q for q, _ in qx.REASONING]
-    cot = json.loads((HERE / "catalog_cot.json").read_text(encoding="utf-8"))
-    texts += [c["prompt"] for c in cot]
+    texts = json.loads((HERE / "probes" / "probe_de.json").read_text(encoding="utf-8"))
     p = WORK / "probe_de.txt"
-    p.write_text("\n\n".join(texts * 2), encoding="utf-8")
+    p.write_text("\n\n".join(texts), encoding="utf-8")
     return p
 
 

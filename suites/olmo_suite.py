@@ -32,9 +32,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
-from quant_lockin import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
+sys.path.insert(0, str(HERE.parent))
+from quant_probe import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
 
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE.parent / "results"
 REPO = "allenai/OLMo-2-0425-1B"
 CKPTS = [  # (Revision, Tokens in Mrd.)
     ("stage1-step40000-tokens84B", 84),

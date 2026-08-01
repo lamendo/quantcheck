@@ -20,9 +20,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import sys
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
-from quant_lockin import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
+sys.path.insert(0, str(HERE.parent))
+from quant_probe import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
 
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE.parent / "results"
 CKPTS = [  # (Repo, Tokens in Mrd.)
     ("TinyLlama/TinyLlama-1.1B-step-50K-105b", 105),
     ("TinyLlama/TinyLlama-1.1B-intermediate-step-240k-503b", 503),

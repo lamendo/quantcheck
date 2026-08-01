@@ -19,9 +19,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
-from quant_lockin import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
+sys.path.insert(0, str(HERE.parent))
+from quant_probe import probe_texts, nll_on, rtn_quantize_, eff_rang  # noqa: E402
 
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE.parent / "results"
 REPO = "allenai/OLMoE-1B-7B-0924"
 CKPTS = [
     ("step5000-tokens20B", 20),
@@ -118,9 +119,9 @@ def main():
         if all(c >= 0.9 for c in corr_final[i:]):
             c_star = t[i]; break
     # K-M4: Pythia-Final-Profil aus dem Telemetrie-Buendel
-    B = json.loads((HERE.parent / "docs" / "demos" / "llm_telemetrie_bundle.json")
-                   .read_text(encoding="utf-8"))
-    pyth = np.asarray(B["training_pythia160m"][-1]["mag_profile"])
+    pyth = np.asarray(json.loads(
+        (HERE.parent / "probes" / "pythia160m_final_mag.json")
+        .read_text(encoding="utf-8"))["mag"])
     r_attr = float(np.corrcoef(np.asarray(rows[-1]["profil"]), pyth)[0, 1])
     k1 = bool(c_star is not None and c_star <= 0.4 * t[-1])
     k2v, k3v = spearman(t, rg), spearman(rg, d4)

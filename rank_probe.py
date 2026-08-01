@@ -24,11 +24,8 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 HERE = Path(__file__).parent
-sys.path.insert(0, str(HERE))
-import atlas                                        # noqa: E402
-from fahrplan_gesetz import fahrplan, shared_rogue, form_deskriptoren  # noqa: E402
-
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE / "results"
+PROBES = HERE / "probes"
 GRID = np.linspace(0, 1, 25)
 STEPS = [0, 128, 512, 1000, 2000, 4000, 8000, 16000, 32000,
          64000, 128000, 143000]
@@ -36,26 +33,13 @@ MODEL = "EleutherAI/pythia-160m"
 
 
 def prompt_texts():
-    import qwythos_extract as qx
-    catalog = {i["id"]: i for i in json.loads(
-        (HERE / "catalog.json").read_text(encoding="utf-8"))}
-    texts = [catalog[i]["prompt"] for i in qx.PICK]
-    texts += [q for q, _ in qx.REASONING]
-    return texts
+    return json.loads((PROBES / "probe_de.json").read_text(encoding="utf-8"))
 
 
 def trio_consensus_mag():
-    runs = {"qwen05b": ART / "run_obs_qwen05b",
-            "smollm2": ART / "run_obs_smollm2",
-            "qwythos9b": ART / "run_qwythos_v0"}
-    mags = []
-    for run in runs.values():
-        ids = atlas.item_ids(run)
-        rogue = shared_rogue(run, ids)
-        mu, _ = fahrplan(run, ids, rogue)
-        fd, _ = form_deskriptoren(mu, run, ids, rogue)
-        mags.append(fd["mag"])
-    return np.mean(mags, axis=0)
+    """Frozen cross-family consensus form (see probes/trio_consensus_mag.json)."""
+    d = json.loads((PROBES / "trio_consensus_mag.json").read_text(encoding="utf-8"))
+    return np.asarray(d["mag"])
 
 
 def measures(hiddens):

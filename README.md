@@ -46,9 +46,18 @@ python rank_probe.py --hf-model EleutherAI/pythia-160m --steps 64000:143000:8000
 # 2. Quantization damage curve (RTN proxy, fast)
 python quant_probe.py --hf-model EleutherAI/pythia-160m --probe en
 
-# 3. Recommendation: earliest checkpoint after benchmark maturity,
+# 3. Real GGUF check (optional; needs a llama.cpp build):
+#    QUANTCHECK_LLAMACPP=/path/to/llama.cpp python gguf_probe.py
+#    (see patches/ if conversion fails on transformers >= 5 configs)
+
+# 4. Recommendation: earliest checkpoint after benchmark maturity,
 #    before rank compression exceeds your damage budget.
 ```
+
+Everything is self-contained: probe corpora live in `probes/` (DE: 31 texts,
+EN: 40), the frozen cross-family reference forms too. `pip install -r
+requirements.txt`, then any script runs as-is; suite scripts write into
+`results/`.
 
 ## What this is / isn't
 

@@ -16,9 +16,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import sys
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
-from quant_lockin import probe_texts, nll_on, rtn_quantize_, STEPS  # noqa: E402
+sys.path.insert(0, str(HERE.parent))
+from quant_probe import probe_texts, nll_on, rtn_quantize_, STEPS  # noqa: E402
 
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE.parent / "results"
 MODEL = "EleutherAI/pythia-160m"
 BITS = [8, 6, 5, 4, 3, 2]
 

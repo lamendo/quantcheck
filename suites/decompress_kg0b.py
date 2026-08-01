@@ -20,10 +20,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
-from quant_lockin import probe_texts  # noqa: E402
+sys.path.insert(0, str(HERE.parent))
+from quant_probe import probe_texts  # noqa: E402
 from decompress_kg0 import diff_effrank, measure, REPO, REV  # noqa: E402
 
-ART = HERE.parent / "artifacts" / "topo_steering"
+ART = HERE.parent / "results"
 LAMBDAS = [0.0, 0.3, 1.0]
 STEPS, BS, ACCUM, SEQ, LR = 1000, 2, 4, 512, 1e-5
 
