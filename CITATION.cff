@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "quantcheck: pick the right checkpoint before you quantize"
+message: "If you use this probe or these results, please cite it as below."
+type: software
+authors:
+  - family-names: "R."
+    given-names: "Jan"
+    affiliation: "lamendo"
+year: 2026
+url: "https://github.com/lamendo/quantcheck"
+license: Apache-2.0

@@ -6,6 +6,14 @@ measurable internal event (depth-schedule rank compression after a "lock-in"
 transition) and provide a cheap, label-free probe that tells you **which
 checkpoint to quantize** — up to ~4× less Q4 damage at equal quality.
 
+![Pythia-160m: rank compresses after lock-in, Int4 damage follows](figures/pythia160m_lockin.png)
+
+![Three families, three regimes](figures/three_families.png)
+
+Longer read: [WRITEUP.md](WRITEUP.md) · interactive explainer:
+[explainer/](explainer/) · full pre-registration ledger incl. negatives:
+[PREREG.md](PREREG.md) · original lab notes (German): [docs/research_trail/](docs/research_trail/)
+
 ## The finding (Pythia suite)
 
 | Pythia-160m checkpoint | PPL f16 | PPL Q4_K_M | ΔlnPPL (damage) |
@@ -73,6 +81,12 @@ quantcheck/
   results/               # all JSONs incl. pre-registered criteria & verdicts
   explainer/             # interactive visual explainer (self-contained HTML)
   PREREG.md              # ledger: what was predicted before each run, incl. kills
+  WRITEUP.md             # the long-form writeup (blog draft)
+  figures/               # core result figures (generated from results/)
+  docs/research_trail/   # original lab notes (German), as-run
+  patches/               # small env fixes needed for reproduction
+  CITATION.cff           # how to cite
+  requirements.txt
   ANNOUNCEMENTS.md       # release notes drafts
 ```
 

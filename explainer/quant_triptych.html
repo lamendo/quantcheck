@@ -1,0 +1,254 @@
+<meta charset="utf-8">
+<title>Der versteckte Preis des langen Trainings</title>
+<style>
+:root{
+  --paper:#f7f7f4; --card:#ffffff; --ink:#1b1d21; --ink2:#565961; --ink3:#8d9099;
+  --line:#e3e3de; --grid:#ececе7; --blau:#2a78d6; --violett:#4a3aa7; --rot:#cf3f3e;
+  --gruen:#0e8a60; --gruen-soft:rgba(14,138,96,.10); --rot-soft:rgba(207,63,62,.08);
+  --mono:ui-monospace,'Cascadia Code',Consolas,monospace;
+  --serif:Georgia,'Iowan Old Style',serif;
+}
+:root[data-theme="dark"], :root.dark{ --dm:1 }
+@media (prefers-color-scheme: dark){:root{
+  --paper:#141519; --card:#1c1e23; --ink:#eceded; --ink2:#b3b5bb; --ink3:#7c7f87;
+  --line:#30323a; --grid:#26282e; --blau:#3987e5; --violett:#9085e9; --rot:#e66767;
+  --gruen:#2fbf8b; --gruen-soft:rgba(47,191,139,.10); --rot-soft:rgba(230,103,103,.09);
+}}
+:root[data-theme="light"]{
+  --paper:#f7f7f4; --card:#ffffff; --ink:#1b1d21; --ink2:#565961; --ink3:#8d9099;
+  --line:#e3e3de; --grid:#ececе7; --blau:#2a78d6; --violett:#4a3aa7; --rot:#cf3f3e;
+  --gruen:#0e8a60; --gruen-soft:rgba(14,138,96,.10); --rot-soft:rgba(207,63,62,.08);
+}
+:root[data-theme="dark"]{
+  --paper:#141519; --card:#1c1e23; --ink:#eceded; --ink2:#b3b5bb; --ink3:#7c7f87;
+  --line:#30323a; --grid:#26282e; --blau:#3987e5; --violett:#9085e9; --rot:#e66767;
+  --gruen:#2fbf8b; --gruen-soft:rgba(47,191,139,.10); --rot-soft:rgba(230,103,103,.09);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:15.5px/1.6 system-ui,-apple-system,'Segoe UI',sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:40px 22px 80px}
+h1{font-family:var(--serif);font-size:clamp(26px,4.5vw,38px);line-height:1.15;
+  margin:0 0 10px;text-wrap:balance}
+.sub{font-size:17px;color:var(--ink2);max-width:64ch;margin-bottom:26px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .v{font:700 26px var(--mono);letter-spacing:-.02em}
+.tile .l{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.t-blau .v{color:var(--blau)}.t-vio .v{color:var(--violett)}.t-rot .v{color:var(--rot)}
+.chartbox{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:18px 18px 10px;margin:26px 0}
+.ptitle{display:flex;align-items:baseline;gap:10px;margin:6px 0 2px}
+.ptitle .dot{width:10px;height:10px;border-radius:3px;flex:none;transform:translateY(1px)}
+.ptitle b{font-size:14.5px}
+.ptitle span{font-size:12.5px;color:var(--ink3)}
+.axnote{font-size:12px;color:var(--ink3);text-align:right;padding:2px 6px 6px}
+svg{display:block;width:100%;height:auto}
+svg text{font:11.5px system-ui;fill:var(--ink3)}
+svg .val{font:600 11.5px var(--mono)}
+.zonelabel{font:600 11px system-ui}
+.note{border-left:4px solid var(--gruen);background:var(--gruen-soft);
+  border-radius:0 10px 10px 0;padding:13px 17px;margin:22px 0;font-size:15px}
+.warn{border-left-color:var(--ink3);background:transparent;border:1px solid var(--line);
+  border-left:4px solid var(--ink3);border-radius:0 10px 10px 0;color:var(--ink2);font-size:13.5px}
+.tt{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--line);
+  border-radius:8px;padding:8px 11px;font:12px var(--mono);box-shadow:0 4px 14px rgba(0,0,0,.12);
+  display:none;z-index:5;white-space:nowrap}
+h2{font-family:var(--serif);font-size:22px;margin:40px 0 8px}
+@media(max-width:640px){.tiles{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <h1>Der versteckte Preis des langen Trainings</h1>
+  <p class="sub">Ein Sprachmodell sieht auf Tests schon früh „fertig" aus. Trainiert man
+  weiter, passiert innen etwas, das kein Test zeigt — und das sich rächt, sobald man das
+  Modell für den Alltag auf 4&nbsp;Bit schrumpft. Drei Kurven, eine Geschichte
+  <span style="color:var(--ink3)">(Pythia-160m, 143&thinsp;000 Trainingsschritte)</span>.</p>
+
+  <div class="tiles">
+    <div class="tile t-blau"><div class="v">~13k</div><div class="l">Schritte, bis die Benchmark-Leistung ausgereift ist — danach ist oben nichts mehr zu sehen</div></div>
+    <div class="tile t-vio"><div class="v">84k</div><div class="l">das „Einrasten": intern beginnt die Kompression — unsichtbar für Loss &amp; Benchmarks</div></div>
+    <div class="tile t-rot"><div class="v">3,9×</div><div class="l">mehr 4-Bit-Schaden (echtes GGUF&nbsp;Q4_K_M) beim letzten Checkpoint vs. Schritt 84k</div></div>
+  </div>
+
+  <div class="chartbox">
+    <div class="ptitle"><span class="dot" style="background:var(--blau)"></span>
+      <b>1 · Was jeder sieht: Benchmark-Leistung</b><span>Lambada-Genauigkeit (öffentliche Pythia-Evals)</span></div>
+    <svg id="p1" viewBox="0 0 940 150" role="img" aria-label="Benchmark-Kurve"></svg>
+    <div class="ptitle"><span class="dot" style="background:var(--violett)"></span>
+      <b>2 · Was unser Instrument sieht: innere Kompression</b><span>effektiver Rang des Tiefen-Fahrplans — fällt = Verarbeitung bündelt sich auf wenige Richtungen</span></div>
+    <svg id="p2" viewBox="0 0 940 150" role="img" aria-label="Rang-Kurve"></svg>
+    <div class="ptitle"><span class="dot" style="background:var(--rot)"></span>
+      <b>3 · Was man beim Schrumpfen bezahlt: 4-Bit-Schaden</b><span>Qualitätsverlust (ΔNLL) durch Int4-Quantisierung, je Checkpoint</span></div>
+    <svg id="p3" viewBox="0 0 940 170" role="img" aria-label="Schadens-Kurve"></svg>
+    <div class="axnote">Trainingsschritte → &nbsp;(Maus/Finger über die Kurven bewegen: alle drei Panels zeigen denselben Zeitpunkt)</div>
+  </div>
+
+  <div class="note"><b>Die Regel in einem Satz:</b> Für 4-Bit-Einsatz nicht den letzten
+  Checkpoint nehmen, sondern einen aus dem <b style="color:var(--gruen)">grünen Fenster</b> —
+  gleiche Testleistung, aber ein Bruchteil des Schrumpf-Schadens.</div>
+
+  <h2>Warum? Der Mechanismus in einem Bild</h2>
+  <p class="sub" style="margin-bottom:10px">Je tiefer ein Modell am Ende komprimiert
+  (kleiner Rang), desto empfindlicher wird es gegen 4-Bit-Rundung — über drei
+  Modellgrößen streng monoton:</p>
+  <div class="chartbox"><svg id="p4" viewBox="0 0 940 250" role="img" aria-label="Mechanismus-Scatter"></svg></div>
+
+  <div class="note warn"><b>Ehrlichkeit:</b> Befund auf der Pythia-Familie, vier Größen
+  (70m–1b) · volles Quant-Spektrum (RTN 2–8&nbsp;Bit, GGUF Q2_K–Q8_0) · zwei Sondenkorpora
+  (DE/EN). Das 1b komprimiert bei 300B Tokens kaum und leidet kaum — der Effekt trifft
+  kleine Modelle am härtesten, also genau die, die am aggressivsten quantisiert werden.
+  Korrelation, Mechanismus plausibel — Kausal-Ablationen und fremde Modellfamilien:
+  ausdrücklich erwünschte Replikation.</div>
+</div>
+<div class="tt" id="tt"></div>
+
+<script>
+"use strict";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const LAM = {0:0,1000:0.065,3000:0.228,13000:0.300,23000:0.339,33000:0.331,43000:0.351,53000:0.345,63000:0.399,73000:0.374,83000:0.372,93000:0.368,103000:0.367,113000:0.347,123000:0.331,133000:0.313,143000:0.328};
+const RANG = {0:7.99,2000:9.21,4000:8.0,8000:7.01,16000:5.44,32000:5.12,64000:5.20,68000:5.33,72000:5.35,76000:5.33,80000:5.39,84000:4.23,88000:3.65,92000:3.20,96000:2.96,100000:2.62,104000:2.46,108000:2.20,112000:2.23,116000:2.11,120000:1.98,124000:1.88,128000:1.80,143000:1.62};
+const SCHADEN = {8000:0.370,16000:0.461,32000:0.318,64000:0.554,76000:0.599,84000:0.775,92000:0.924,108000:1.495,128000:2.107,143000:3.711};
+const SCAT = [{n:"Pythia-70m",r:1.13,s:8.15},{n:"Pythia-160m",r:1.62,s:3.71},{n:"Pythia-1b",r:7.02,s:0.55},{n:"Pythia-410m",r:8.05,s:1.11}];
+const XMAX = 143000, LOCK = 84000, REIF = 13000;
+const M = {l:52, r:14, t:8, b:22};
+
+function xs(v, w){ return M.l + v / XMAX * (w - M.l - M.r); }
+function series(obj){ return Object.keys(obj).map(Number).sort((a,b)=>a-b).map(k=>[k, obj[k]]); }
+
+function panel(id, data, color, ymin, ymax, fmt, H, fill){
+  const svg = document.getElementById(id);
+  const W = 940;
+  svg.innerHTML = "";
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (t, at) => { const e = document.createElementNS(ns, t);
+    for (const k in at) e.setAttribute(k, at[k]); svg.appendChild(e); return e; };
+  const ys = v => M.t + (1 - (v - ymin) / (ymax - ymin)) * (H - M.t - M.b);
+  // Zonen
+  el("rect", {x:xs(REIF,W), y:M.t, width:xs(LOCK,W)-xs(REIF,W), height:H-M.t-M.b,
+              fill:css("--gruen-soft")});
+  el("rect", {x:xs(LOCK,W), y:M.t, width:xs(XMAX,W)-xs(LOCK,W), height:H-M.t-M.b,
+              fill:css("--rot-soft")});
+  el("line", {x1:xs(LOCK,W), x2:xs(LOCK,W), y1:M.t, y2:H-M.b,
+              stroke:css("--violett"), "stroke-width":1.4, "stroke-dasharray":"5 4"});
+  // Gitter + Achsen
+  for (let s = 0; s <= XMAX; s += 20000){
+    el("line", {x1:xs(s,W), x2:xs(s,W), y1:H-M.b, y2:H-M.b+4, stroke:css("--line")});
+    const t = el("text", {x:xs(s,W), y:H-6, "text-anchor":"middle"});
+    t.textContent = s === 0 ? "0" : (s/1000)+"k";
+  }
+  for (const gy of [ymin, (ymin+ymax)/2, ymax]){
+    el("line", {x1:M.l, x2:W-M.r, y1:ys(gy), y2:ys(gy), stroke:css("--grid")});
+    const t = el("text", {x:M.l-6, y:ys(gy)+4, "text-anchor":"end", class:"val"});
+    t.textContent = fmt(gy);
+  }
+  // Fläche + Linie
+  const pts = series(data);
+  const dline = pts.map((p,i)=>(i?"L":"M")+xs(p[0],W).toFixed(1)+","+ys(p[1]).toFixed(1)).join("");
+  if (fill){
+    el("path", {d:dline+`L${xs(pts[pts.length-1][0],W)},${ys(ymin)}L${xs(pts[0][0],W)},${ys(ymin)}Z`,
+                fill:color, opacity:0.08});
+  }
+  el("path", {d:dline, fill:"none", stroke:color, "stroke-width":2.2,
+              "stroke-linejoin":"round"});
+  for (const [s,v] of pts)
+    el("circle", {cx:xs(s,W), cy:ys(v), r:2.6, fill:color});
+  // Endpunkt-Label
+  const last = pts[pts.length-1];
+  const lt = el("text", {x:xs(last[0],W)-6, y:ys(last[1])-8, "text-anchor":"end",
+                         class:"val", fill:color});
+  lt.textContent = fmt(last[1]);
+  return {svg, pts, ys, W, H, color, fmt};
+}
+
+let panels = [];
+function drawAll(){
+  panels = [
+    panel("p1", LAM, css("--blau"), 0, 0.45, v=>Math.round(v*100)+" %", 150, true),
+    panel("p2", RANG, css("--violett"), 0, 10, v=>v.toFixed(0), 150, false),
+    panel("p3", SCHADEN, css("--rot"), 0, 4, v=>v.toFixed(1), 170, true),
+  ];
+  // Zonen-Beschriftung nur im obersten Panel
+  const ns = "http://www.w3.org/2000/svg";
+  const svg1 = panels[0].svg;
+  const lbl = (x, txt, col, anchor) => { const t = document.createElementNS(ns, "text");
+    t.setAttribute("x", x); t.setAttribute("y", M.t+12); t.setAttribute("class","zonelabel");
+    t.setAttribute("fill", col); t.setAttribute("text-anchor", anchor||"start");
+    t.textContent = txt; svg1.appendChild(t); };
+  lbl(xs((REIF+LOCK)/2, 940), "✓ Sweet Spot: reif & robust", css("--gruen"), "middle");
+  lbl(xs(LOCK,940)+8, "Einrasten → Kompression", css("--violett"));
+  const svg3 = panels[2].svg;
+  const t3 = document.createElementNS(ns, "text");
+  t3.setAttribute("x", xs(LOCK,940)+8); t3.setAttribute("y", M.t+12);
+  t3.setAttribute("class","zonelabel"); t3.setAttribute("fill", css("--rot"));
+  t3.textContent = "Schaden ×6,7 von 64k bis 143k"; svg3.appendChild(t3);
+  drawScatter();
+}
+
+function drawScatter(){
+  const svg = document.getElementById("p4"); svg.innerHTML = "";
+  const ns = "http://www.w3.org/2000/svg"; const W=940,H=250,L=60,R=30,T=18,B=40;
+  const el = (t,at)=>{const e=document.createElementNS(ns,t);
+    for(const k in at)e.setAttribute(k,at[k]);svg.appendChild(e);return e;};
+  const xr = v => L + (v-0.8)/(9.2-0.8)*(W-L-R);
+  const ylog = v => T + (1 - (Math.log(v)-Math.log(0.8))/(Math.log(10)-Math.log(0.8)))*(H-T-B);
+  for (const g of [1,2,4,8]){
+    el("line",{x1:L,x2:W-R,y1:ylog(g),y2:ylog(g),stroke:css("--grid")});
+    const t=el("text",{x:L-8,y:ylog(g)+4,"text-anchor":"end",class:"val"});t.textContent=g;
+  }
+  for (const g of [1,2,4,6,8]){
+    const t=el("text",{x:xr(g),y:H-14,"text-anchor":"middle",class:"val"});t.textContent=g;
+  }
+  const tx=el("text",{x:(L+W-R)/2,y:H-1,"text-anchor":"middle"});
+  tx.textContent="End-Kompression: effektiver Rang des Fahrplans (klein = stark komprimiert)";
+  const ty=el("text",{x:14,y:T+8});ty.textContent="4-Bit-Schaden (ΔNLL, log)";
+  const sorted=[...SCAT].sort((a,b)=>a.r-b.r);
+  el("path",{d:sorted.map((p,i)=>(i?"L":"M")+xr(p.r)+","+ylog(p.s)).join(""),
+             fill:"none",stroke:css("--ink3"),"stroke-width":1.2,"stroke-dasharray":"4 4"});
+  for (const p of SCAT){
+    el("circle",{cx:xr(p.r),cy:ylog(p.s),r:7,fill:css("--rot")});
+    el("circle",{cx:xr(p.r),cy:ylog(p.s),r:7,fill:"none",stroke:css("--card"),"stroke-width":2});
+    const t=el("text",{x:xr(p.r)+12,y:ylog(p.s)+4,class:"val",fill:css("--ink")});
+    t.textContent=p.n+"  (Schaden "+p.s.toFixed(1)+")";
+  }
+  const note=el("text",{x:W-R,y:T+10,"text-anchor":"end"});
+  note.textContent="4 Größen · echtes GGUF, Schadensratio 143k/84k: Q8 2,4× · Q6 3,4× · Q5 10,5× · Q4 3,9× · Q3 4,4× · Q2 4,2×";
+}
+
+// Sync-Hover
+const tt = document.getElementById("tt");
+function hook(){
+  for (const p of panels){
+    p.svg.addEventListener("pointermove", ev => {
+      const r = p.svg.getBoundingClientRect();
+      const x = (ev.clientX - r.left) / r.width * 940;
+      const step = Math.max(0, Math.min(XMAX, (x - M.l) / (940 - M.l - M.r) * XMAX));
+      let html = `<b>Schritt ~${Math.round(step/1000)}k</b>`;
+      const names = ["Benchmark", "Rang", "Int4-Schaden"];
+      panels.forEach((q, qi) => {
+        let best = q.pts[0];
+        for (const pt of q.pts) if (Math.abs(pt[0]-step) < Math.abs(best[0]-step)) best = pt;
+        html += `<br><span style="color:${q.color}">●</span> ${names[qi]}: ${q.fmt(best[1])}`;
+        let g = q.svg.querySelector(".cross");
+        if (!g){ g = document.createElementNS("http://www.w3.org/2000/svg","line");
+          g.setAttribute("class","cross"); g.setAttribute("stroke", css("--ink3"));
+          g.setAttribute("stroke-width","1"); q.svg.appendChild(g); }
+        g.setAttribute("x1", xs(step,940)); g.setAttribute("x2", xs(step,940));
+        g.setAttribute("y1", M.t); g.setAttribute("y2", q.H - M.b);
+      });
+      tt.innerHTML = html; tt.style.display = "block";
+      tt.style.left = Math.min(ev.clientX + 14, innerWidth - 190) + "px";
+      tt.style.top = (ev.clientY + 14) + "px";
+    });
+    p.svg.addEventListener("pointerleave", () => {
+      tt.style.display = "none";
+      panels.forEach(q => { const g = q.svg.querySelector(".cross"); if (g) g.remove(); });
+    });
+  }
+}
+drawAll(); hook();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ()=>{drawAll();hook();});
+new MutationObserver(()=>{drawAll();hook();}).observe(document.documentElement,
+  {attributes:true, attributeFilter:["data-theme"]});
+</script>
