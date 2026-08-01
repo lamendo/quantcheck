@@ -1,0 +1,50 @@
+{
+ "checkpoints": [
+  {
+   "tokens_b": 105,
+   "nll_fp32": 6.1216,
+   "eff_rang": 4.51,
+   "delta_int4": 0.0183
+  },
+  {
+   "tokens_b": 503,
+   "nll_fp32": 8.9344,
+   "eff_rang": 8.78,
+   "delta_int4": 0.5153
+  },
+  {
+   "tokens_b": 1000,
+   "nll_fp32": 5.3414,
+   "eff_rang": 4.53,
+   "delta_int4": -0.2189
+  },
+  {
+   "tokens_b": 1500,
+   "nll_fp32": 4.9095,
+   "eff_rang": 4.5,
+   "delta_int4": -0.1394
+  },
+  {
+   "tokens_b": 2000,
+   "nll_fp32": 5.068,
+   "eff_rang": 4.64,
+   "delta_int4": -0.0645
+  },
+  {
+   "tokens_b": 2500,
+   "nll_fp32": 4.3731,
+   "eff_rang": 5.6,
+   "delta_int4": -0.0274
+  },
+  {
+   "tokens_b": 3000,
+   "nll_fp32": 4.2157,
+   "eff_rang": 2.49,
+   "delta_int4": 0.1556
+  }
+ ],
+ "K1_tokens_rang": -0.25,
+ "K2_tokens_schaden": -0.036,
+ "K3_rang_schaden": 0.179,
+ "verdikt": "KILL: Befund bleibt (vorerst) Pythia-gebunden"
+}

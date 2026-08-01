@@ -1,0 +1,770 @@
+<title>LLM-Karte — ein Sprachmodell zum Inspizieren</title>
+<style>
+  :root {
+    --page: #f9f9f7; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --border: rgba(11,11,11,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --page: #0d0d0d; --ink: #fff; --ink-2: #c3c2b7; --muted: #898781;
+      --border: rgba(255,255,255,0.12);
+    }
+  }
+  :root[data-theme="dark"] { --page: #0d0d0d; --ink: #fff; --ink-2: #c3c2b7;
+    --muted: #898781; --border: rgba(255,255,255,0.12); }
+  :root[data-theme="light"] { --page: #f9f9f7; --ink: #0b0b0b; --ink-2: #52514e;
+    --muted: #898781; --border: rgba(11,11,11,0.10); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .top { max-width: 1280px; margin: 0 auto; padding: 18px 20px 8px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .14em; font-size: 11.5px;
+             color: var(--muted); font-weight: 600; margin: 0 0 5px; }
+  h1 { margin: 0 0 5px; font-size: clamp(21px, 3vw, 29px); letter-spacing: -.015em; }
+  .lede { color: var(--ink-2); font-size: 14.5px; margin: 0; max-width: 96ch; }
+  .stage-wrap { max-width: 1280px; margin: 12px auto 0; padding: 0 20px 36px; }
+  .stage { position: relative; border-radius: 14px; overflow: hidden;
+           border: 1px solid var(--border); background: #0b0e14; }
+  canvas { display: block; width: 100%; height: min(78vh, 800px); cursor: grab; }
+  canvas.dragging { cursor: grabbing; }
+
+  .hud { position: absolute; display: flex; gap: 8px; flex-wrap: wrap; z-index: 4; }
+  .hud.tl { top: 12px; left: 12px; max-width: 60%; }
+  .hud.tr { top: 12px; right: 12px; flex-direction: column; align-items: flex-end; }
+  .chip { border: 1px solid rgba(255,255,255,.18); background: rgba(13,17,26,.85);
+          color: #c8d2e0; border-radius: 999px; padding: 6px 13px; font-size: 12.5px;
+          cursor: pointer; font-family: inherit; }
+  .chip.on { background: #2a78d6; border-color: #2a78d6; color: #fff; font-weight: 600; }
+  .chip:focus-visible, .zbtn:focus-visible { outline: 2px solid #86b6ef; outline-offset: 2px; }
+  .zoombox { display: flex; flex-direction: column; gap: 6px; }
+  .zbtn { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
+          background: rgba(13,17,26,.85); color: #c8d2e0; font-size: 17px; cursor: pointer; }
+  .zlevel { color: #8fa0b8; font-size: 11px; background: rgba(13,17,26,.85);
+            border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 5px 9px;
+            text-align: right; }
+  .status { position: absolute; left: 12px; bottom: 86px; color: #8fa0b8; font-size: 12px;
+            background: rgba(13,17,26,.85); border: 1px solid rgba(255,255,255,.12);
+            padding: 7px 12px; border-radius: 9px; font-variant-numeric: tabular-nums;
+            pointer-events: none; line-height: 1.55; z-index: 2; }
+  .status b { color: #e8eef7; font-weight: 650; }
+
+  /* Ortskarte (Info-Panel) */
+  .place { position: absolute; top: 12px; right: 12px; width: min(340px, calc(100% - 24px));
+           max-height: calc(100% - 110px); overflow-y: auto; z-index: 6;
+           background: rgba(13,17,26,.96); border: 1px solid rgba(255,255,255,.2);
+           border-radius: 13px; padding: 16px 18px; color: #dbe4f0; display: none; }
+  .place h3 { margin: 0 26px 2px 0; font-size: 17px; color: #fff; letter-spacing: -.01em; }
+  .place .alias { color: #66b8ff; font-size: 12.5px; margin: 0 0 10px; font-weight: 600; }
+  .place p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.55; color: #b7c2d4; }
+  .place .vals { border-top: 1px solid rgba(255,255,255,.14); padding-top: 10px; margin-top: 2px; }
+  .place .vals div { display: flex; justify-content: space-between; gap: 12px;
+                     font-size: 13px; padding: 3px 0; font-variant-numeric: tabular-nums; }
+  .place .vals span:last-child { color: #fff; font-weight: 650; }
+  .place .src { color: #7787a0; font-size: 11.5px; margin-top: 10px; }
+  .pclose { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px;
+            border-radius: 7px; border: none; background: rgba(255,255,255,.1);
+            color: #c8d2e0; cursor: pointer; font-size: 14px; }
+
+  .timeline { position: absolute; left: 0; right: 0; bottom: 0;
+              background: linear-gradient(transparent, rgba(7,9,14,.94) 30%);
+              padding: 26px 18px 14px; z-index: 3; }
+  .tl-row { display: flex; align-items: center; gap: 14px; }
+  .play { width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+          background: #2a78d6; color: #fff; font-size: 16px; flex: none; }
+  .track { position: relative; flex: 1; height: 42px; }
+  input[type=range] { position: absolute; inset: 0; width: 100%; margin: 0;
+    appearance: none; -webkit-appearance: none; background: transparent; z-index: 3; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; margin-top: 18px;
+      background: rgba(255,255,255,.16); border-radius: 3px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: #fff; margin-top: -6px; cursor: pointer;
+      border: 3px solid #2a78d6; }
+  .pin { position: absolute; top: 0; transform: translateX(-50%); color: #8fa0b8;
+         font-size: 10.5px; text-align: center; pointer-events: none; white-space: nowrap; }
+  .pin::after { content: ""; display: block; width: 1px; height: 9px;
+                background: #8fa0b8; margin: 2px auto 0; }
+  .tstep { color: #e8eef7; font-size: 13px; min-width: 118px; text-align: right;
+           font-variant-numeric: tabular-nums; flex: none; }
+
+  .traces { position: absolute; left: 12px; right: 12px; bottom: 86px; z-index: 5;
+            background: rgba(10,13,20,.96); border: 1px solid rgba(255,255,255,.18);
+            border-radius: 12px; padding: 10px 14px 6px; }
+  .tr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+             color: #8fa0b8; font-size: 12px; margin-bottom: 4px; }
+  .tr-head b { color: #dbe4f0; }
+  #tr-svg { display: block; cursor: crosshair; }
+  .tr-label { font-size: 9.5px; fill: #8fa0b8; }
+  #tip { position: fixed; pointer-events: none; z-index: 20; display: none;
+         background: rgba(13,17,26,.95); border: 1px solid rgba(255,255,255,.22);
+         border-radius: 7px; padding: 5px 10px; font-size: 12.5px; color: #eef3fa;
+         font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  #tip small { display: block; color: #8fa0b8; font-weight: 400; font-size: 11px; }
+  .legend { color: var(--muted); font-size: 12.5px; margin-top: 10px; max-width: 104ch; }
+  .legend b { color: var(--ink-2); }
+</style>
+
+<div class="top">
+  <p class="eyebrow">lamendo · pulse · echte Messdaten (Pythia-160m, 27 Trainingsstände)</p>
+  <h1>Die Karte eines Sprachmodells</h1>
+  <p class="lede">Erkunden wie Google Maps: <b>ziehen</b> und <b>zoomen</b> (mehr Details erscheinen),
+    <b>alles anklicken</b> — jedes Bauteil erklärt sich selbst und zeigt seine Live-Messwerte.
+    Unten die Zeitleiste: das komplette Training, vor- und zurückspulbar.</p>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <div class="hud tl">
+      <button class="chip on" id="lyr-traffic">Aktivität</button>
+      <button class="chip on" id="lyr-weather">Kompressions-Risiko</button>
+      <button class="chip on" id="lyr-incidents">Ausreißer</button>
+      <button class="chip" id="lyr-traces">Leiterbahnen · Schicht-Verläufe</button>
+    </div>
+    <div class="hud tr">
+      <div class="zoombox">
+        <button class="zbtn" id="zin" aria-label="Hineinzoomen">+</button>
+        <button class="zbtn" id="zout" aria-label="Herauszoomen">−</button>
+        <button class="zbtn" id="zfit" aria-label="Ganzes Modell zeigen" style="font-size:12px">⌂</button>
+      </div>
+      <div class="zlevel" id="zlevel"></div>
+    </div>
+    <div class="status" id="status"></div>
+
+    <div class="place" id="place">
+      <button class="pclose" id="pclose" aria-label="Schließen">×</button>
+      <h3 id="p-title"></h3>
+      <p class="alias" id="p-alias"></p>
+      <p id="p-text"></p>
+      <div class="vals" id="p-vals"></div>
+      <p class="src" id="p-src"></p>
+    </div>
+
+    <div class="traces" id="traces" hidden>
+      <div class="tr-head">
+        <span><b>Leiterbahnen:</b> Durchsatz jeder Schicht über das Training. Bernstein = baut noch um,
+          Blau = stabilisiert. Klick setzt die Zeit.</span>
+        <button class="pclose" id="tr-close" aria-label="Schließen" style="position:static">×</button>
+      </div>
+      <svg id="tr-svg" width="100%" height="240" viewBox="0 0 1000 240" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="timeline">
+      <div class="tl-row">
+        <button class="play" id="play" aria-label="Training abspielen">▶</button>
+        <div class="track">
+          <div id="pins"></div>
+          <input type="range" id="scrub" min="0" max="26" step="0.01" value="26"
+                 aria-label="Trainingsfortschritt">
+        </div>
+        <div class="tstep" id="tstep"></div>
+      </div>
+    </div>
+  </div>
+  <p class="legend"><b>Kartenebenen:</b> <b>Aktivität</b> = gemessene Umbau-Intensität je Tiefe
+    (Lichtfluss auf der Hauptleitung; heller = mehr). <b>Kompressions-Risiko</b> = gemessener Fehlerzuwachs
+    bei 4-Bit-Verkleinerung (oranges Glühen). <b>Ausreißer</b> = Kanäle mit extremen Werten (⚠, reine
+    Trainings-Artefakte). Die <b>Breite der Hauptleitung</b> ist der gemessene effektive Rang —
+    beim Abspielen sieht man sie sich ab Schritt 84.000 verengen. Studien 07–34, vorregistriert;
+    Datenbündel <code>docs/demos/llm_telemetrie_bundle.json</code>.</p>
+</div>
+<div id="tip"></div>
+
+<script>
+"use strict";
+const B = {"meta": {"erzeugt": "2026-07-29", "quelle": "Representation Observatory Studien 07-32", "modell_haupt": "EleutherAI/pythia-160m (12 Layer, 143k Steps)"}, "training_pythia160m": [{"step": 0, "form_r_trio": 0.946, "n_rogue": 0, "eff_rang": 7.99, "mag_profile": [0.13814221322536469, 0.13814221322536469, 0.17183223366737366, 0.20552225410938263, 0.21660317480564117, 0.22768409550189972, 0.24112240225076675, 0.2545607089996338, 0.2541924715042114, 0.25382423400878906, 0.2648840695619583, 0.27594390511512756, 0.275100976228714, 0.2742580473423004, 0.27705392241477966, 0.2798497974872589, 0.2802911847829819, 0.28073257207870483, 0.284649521112442, 0.2885664701461792, 0.3038402795791626, 0.319114089012146, 0.6595570445060726, 0.9999999999999991, 1.0]}, {"step": 128, "form_r_trio": 0.834, "n_rogue": 0, "eff_rang": 8.17, "mag_profile": [0.14174750447273254, 0.14174750447273254, 0.1735793650150299, 0.20541122555732727, 0.22525974363088608, 0.24510826170444489, 0.2650258466601372, 0.28494343161582947, 0.284858763217926, 0.2847740948200226, 0.3073570132255554, 0.32993993163108826, 0.3491968363523483, 0.3684537410736084, 0.39500081539154047, 0.42154788970947266, 0.47385978698730463, 0.5261716842651366, 0.5876252055168152, 0.6490787267684937, 0.7790355682373045, 0.9089924097061157, 0.9544962048530579, 0.9999999999999999, 1.0]}, {"step": 512, "form_r_trio": 0.95, "n_rogue": 0, "eff_rang": 8.12, "mag_profile": [0.17352277040481567, 0.17352277040481567, 0.19089991599321365, 0.20827706158161163, 0.23351090401411057, 0.2587447464466095, 0.2580181956291199, 0.25729164481163025, 0.26383158564567566, 0.27037152647972107, 0.26474258303642273, 0.2591136395931244, 0.27092866599559784, 0.2827436923980713, 0.28770121932029724, 0.2926587462425232, 0.3024819642305374, 0.31230518221855164, 0.3020218461751938, 0.29173851013183594, 0.3185154348611831, 0.3452923595905304, 0.6726461797952648, 0.9999999999999991, 1.0]}, {"step": 1000, "form_r_trio": 0.922, "n_rogue": 0, "eff_rang": 7.89, "mag_profile": [0.18110068142414093, 0.18110068142414093, 0.19024208933115005, 0.19938349723815918, 0.23967713117599487, 0.27997076511383057, 0.292944997549057, 0.30591922998428345, 0.31666670739650726, 0.3274141848087311, 0.3049141615629196, 0.28241413831710815, 0.25646620988845825, 0.23051828145980835, 0.23918630927801132, 0.2478543370962143, 0.2476714551448822, 0.2474885731935501, 0.25289710611104965, 0.2583056390285492, 0.27104824781417847, 0.28379085659980774, 0.6418954282999034, 0.9999999999999991, 1.0]}, {"step": 2000, "form_r_trio": 0.827, "n_rogue": 6, "eff_rang": 9.21, "mag_profile": [0.39431026577949524, 0.39431026577949524, 0.37016502022743225, 0.34601977467536926, 0.39827053248882294, 0.45052129030227656, 0.5702244937419891, 0.6899276971817014, 0.571751356124878, 0.4535750150680542, 0.4743136465549469, 0.4950522780418396, 0.4199397265911102, 0.34482717514038086, 0.3517051041126251, 0.3585830330848694, 0.3612492084503174, 0.3639153838157654, 0.40925176441669464, 0.4545881450176239, 0.45839500427246094, 0.462201863527298, 0.7311009317636487, 0.9999999999999993, 1.0]}, {"step": 4000, "form_r_trio": 0.801, "n_rogue": 19, "eff_rang": 8.0, "mag_profile": [0.4130028486251831, 0.4130028486251831, 0.35012464225292206, 0.287246435880661, 0.31327494978904724, 0.33930346369743347, 0.5689967721700667, 0.7986900806426999, 0.5739050507545473, 0.34912002086639404, 0.34414437413215637, 0.3391687273979187, 0.3221435695886612, 0.3051184117794037, 0.31944623589515686, 0.33377406001091003, 0.329070121049881, 0.32436618208885193, 0.3897319585084915, 0.4550977349281311, 0.5061107277870177, 0.5571237206459045, 0.7785618603229519, 0.9999999999999993, 1.0]}, {"step": 8000, "form_r_trio": 0.697, "n_rogue": 12, "eff_rang": 7.01, "mag_profile": [0.6231312155723572, 0.6231312155723572, 0.46275657415390015, 0.3023819327354431, 0.3198101818561554, 0.3372384309768677, 0.6268846094608306, 0.9165307879447933, 0.6226950734853747, 0.3288593590259552, 0.31574343144893646, 0.3026275038719177, 0.3053334355354309, 0.3080393671989441, 0.33373008668422693, 0.3594208061695099, 0.36981140077114105, 0.3802019953727722, 0.42922343313694, 0.4782448709011078, 0.6367970257997511, 0.7953491806983948, 0.8976745903491973, 0.9999999999999998, 1.0]}, {"step": 16000, "form_r_trio": 0.818, "n_rogue": 8, "eff_rang": 5.44, "mag_profile": [0.4863019287586212, 0.4863019287586212, 0.3242150992155075, 0.1621282696723938, 0.18668698519468307, 0.21124570071697232, 0.4174629673361777, 0.6236802339553831, 0.3979425504803659, 0.1722048670053482, 0.1734219267964363, 0.17463898658752441, 0.17701679468154907, 0.17939460277557373, 0.1902623474597931, 0.20113009214401245, 0.24148149788379664, 0.2818329036235808, 0.3072342425584793, 0.3326355814933777, 0.4268793761730193, 0.5211231708526611, 0.7605615854263302, 0.9999999999999993, 1.0]}, {"step": 32000, "form_r_trio": 0.845, "n_rogue": 6, "eff_rang": 5.12, "mag_profile": [0.41647595167160034, 0.41647595167160034, 0.2837621569633484, 0.15104836225509644, 0.19108349829912186, 0.23111863434314725, 0.4015277102589606, 0.571936786174774, 0.358274817466736, 0.1446128487586975, 0.14196603000164032, 0.13931921124458313, 0.14418140053749084, 0.14904358983039856, 0.15899574756622314, 0.16894790530204773, 0.22247546911239616, 0.2760030329227446, 0.3064185380935669, 0.33683404326438904, 0.43482784926891316, 0.5328216552734375, 0.7664108276367184, 0.9999999999999993, 1.0]}, {"step": 64000, "form_r_trio": 0.862, "n_rogue": 10, "eff_rang": 5.2, "mag_profile": [0.3533855974674225, 0.3533855974674225, 0.2777700275182724, 0.20215445756912231, 0.22390083968639374, 0.24564722180366513, 0.39695473015308375, 0.5482622385025022, 0.34216104447841655, 0.13605985045433044, 0.1380700170993805, 0.14008018374443054, 0.14548011124134064, 0.15088003873825073, 0.17121848464012143, 0.1915569305419922, 0.24433454871177665, 0.2971121668815611, 0.3399575352668762, 0.38280290365219116, 0.5074276924133299, 0.632052481174469, 0.8160262405872343, 0.9999999999999996, 1.0], "delta_int4": 0.5536}, {"step": 68000, "form_r_trio": 0.865, "n_rogue": 10, "eff_rang": 5.33, "mag_profile": [0.3487502336502075, 0.3487502336502075, 0.279727078974247, 0.21070392429828644, 0.23117712885141373, 0.251650333404541, 0.39458352327346796, 0.5375167131423948, 0.3378484919667245, 0.13818027079105377, 0.1418178677558899, 0.145455464720726, 0.1519503816962242, 0.1584452986717224, 0.17657484114170072, 0.19470438361167908, 0.24820233881473533, 0.3017002940177916, 0.34294556081295013, 0.3841908276081085, 0.5139466971158979, 0.6437025666236877, 0.8218512833118437, 0.9999999999999996, 1.0]}, {"step": 72000, "form_r_trio": 0.867, "n_rogue": 10, "eff_rang": 5.35, "mag_profile": [0.33825308084487915, 0.33825308084487915, 0.2752266004681587, 0.2122001200914383, 0.2295086830854416, 0.24681724607944489, 0.3928720131516456, 0.5389267802238462, 0.3375660628080369, 0.13620534539222717, 0.13935814797878265, 0.14251095056533813, 0.14956817775964737, 0.1566254049539566, 0.17770165205001828, 0.19877789914608002, 0.24933948367834086, 0.2999010682106017, 0.3400048464536667, 0.38010862469673157, 0.5127502530813215, 0.6453918814659119, 0.8226959407329557, 0.9999999999999996, 1.0]}, {"step": 76000, "form_r_trio": 0.881, "n_rogue": 10, "eff_rang": 5.33, "mag_profile": [0.3232671916484833, 0.3232671916484833, 0.2658860310912132, 0.20850487053394318, 0.22250553220510483, 0.23650619387626648, 0.37035141885280604, 0.5041966438293455, 0.3174981400370599, 0.13079963624477386, 0.13505546748638153, 0.1393112987279892, 0.14827213436365128, 0.15723296999931335, 0.17760249227285382, 0.19797201454639435, 0.2459347322583198, 0.29389744997024525, 0.3290797173976898, 0.3642619848251343, 0.48810052871704085, 0.6119390726089478, 0.8059695363044737, 0.9999999999999996, 1.0], "delta_int4": 0.5991}, {"step": 80000, "form_r_trio": 0.891, "n_rogue": 10, "eff_rang": 5.39, "mag_profile": [0.3098793923854828, 0.3098793923854828, 0.2566569447517395, 0.20343449711799622, 0.21808843314647675, 0.23274236917495728, 0.3566844314336776, 0.4806264936923979, 0.30605170130729686, 0.13147690892219543, 0.135305255651474, 0.13913360238075256, 0.1480816826224327, 0.15702976286411285, 0.18213618546724317, 0.20724260807037354, 0.24964515864849085, 0.29204770922660817, 0.321990042924881, 0.3519323766231537, 0.47661231458187087, 0.6012922525405884, 0.800646126270294, 0.9999999999999996, 1.0]}, {"step": 84000, "form_r_trio": 0.94, "n_rogue": 12, "eff_rang": 4.23, "mag_profile": [0.17081153392791748, 0.17081153392791748, 0.1462198868393898, 0.12162823975086212, 0.12351511418819427, 0.12540198862552643, 0.1961608901619911, 0.2669197916984557, 0.16995501518249517, 0.07299023866653442, 0.07667262852191925, 0.08035501837730408, 0.08569638058543205, 0.09103774279356003, 0.11168575659394261, 0.13233377039432526, 0.153827928006649, 0.17532208561897272, 0.18835576623678207, 0.20138944685459137, 0.26895170658826817, 0.3365139663219452, 0.6682569831609722, 0.9999999999999991, 1.0], "delta_int4": 0.775}, {"step": 88000, "form_r_trio": 0.948, "n_rogue": 12, "eff_rang": 3.65, "mag_profile": [0.12093963474035263, 0.12093963474035263, 0.1048995852470398, 0.08885953575372696, 0.09060284122824669, 0.09234614670276642, 0.13908219337463376, 0.1858182400465011, 0.11955957859754567, 0.05330091714859009, 0.057754380628466606, 0.062207844108343124, 0.06710685230791569, 0.07200586050748825, 0.09647767990827558, 0.12094949930906296, 0.1282932572066784, 0.1356370151042938, 0.15916208177804947, 0.18268714845180511, 0.21216978132724756, 0.24165241420269012, 0.6208262071013446, 0.999999999999999, 1.0]}, {"step": 92000, "form_r_trio": 0.945, "n_rogue": 7, "eff_rang": 3.2, "mag_profile": [0.1025715321302414, 0.1025715321302414, 0.08965390175580978, 0.07673627138137817, 0.07606451213359833, 0.07539275288581848, 0.1122845634818077, 0.14917637407779688, 0.09887635521590712, 0.04857633635401726, 0.05355038866400719, 0.058524440973997116, 0.06044367328286171, 0.0623629055917263, 0.08179382048547265, 0.10122473537921906, 0.1104333847761154, 0.11964203417301175, 0.1294671818614006, 0.13929232954978943, 0.16284642368555066, 0.18640051782131195, 0.5932002589106555, 0.999999999999999, 1.0], "delta_int4": 0.9238}, {"step": 96000, "form_r_trio": 0.945, "n_rogue": 6, "eff_rang": 2.96, "mag_profile": [0.08450162410736084, 0.08450162410736084, 0.07357395440340042, 0.06264628469944, 0.06317587569355965, 0.06370546668767929, 0.09431732818484305, 0.1249291896820068, 0.08473344892263415, 0.044537708163261414, 0.048446452245116234, 0.052355196326971054, 0.053330378606915474, 0.054305560886859894, 0.07280847430229184, 0.09131138771772385, 0.09971714019775389, 0.10812289267778394, 0.11739544197916985, 0.12666799128055573, 0.14168757200241086, 0.15670715272426605, 0.5783535763621324, 0.9999999999999988, 1.0]}, {"step": 100000, "form_r_trio": 0.943, "n_rogue": 6, "eff_rang": 2.62, "mag_profile": [0.06970246881246567, 0.06970246881246567, 0.06138610281050205, 0.05306973680853844, 0.053087018430233, 0.053104300051927567, 0.07663998194038867, 0.10017566382884976, 0.06805914267897609, 0.035942621529102325, 0.04032173007726669, 0.04470083862543106, 0.04711289145052433, 0.0495249442756176, 0.06415325216948985, 0.07878156006336212, 0.0825764536857605, 0.08637134730815886, 0.09530337527394295, 0.10423540323972702, 0.11736562475562094, 0.1304958462715149, 0.5652479231357568, 0.9999999999999988, 1.0]}, {"step": 104000, "form_r_trio": 0.944, "n_rogue": 6, "eff_rang": 2.46, "mag_profile": [0.05551185458898544, 0.05551185458898544, 0.0493242722004652, 0.04313668981194496, 0.04330567084252834, 0.043474651873111725, 0.06250731274485588, 0.08153997361660001, 0.054840744473040125, 0.02814151532948017, 0.03251763340085745, 0.036893751472234726, 0.038666920736432076, 0.040440090000629425, 0.061042830348014804, 0.08164557069540024, 0.08453187718987465, 0.08741818368434905, 0.08976637572050095, 0.09211456775665283, 0.10639875754714011, 0.12068294733762741, 0.560341473668813, 0.9999999999999988, 1.0]}, {"step": 108000, "form_r_trio": 0.941, "n_rogue": 6, "eff_rang": 2.2, "mag_profile": [0.04668983072042465, 0.04668983072042465, 0.0427505224943161, 0.03881121426820755, 0.03775237128138542, 0.03669352829456329, 0.052588053047657006, 0.0684825778007507, 0.046350589953362956, 0.02421860210597515, 0.030582309700548645, 0.03694601729512215, 0.038206636905670166, 0.039467256516218185, 0.0518736783415079, 0.06428010016679764, 0.06800980120897293, 0.07173950225114821, 0.07314512133598328, 0.07455074042081833, 0.08649806678295134, 0.09844539314508438, 0.5492226965725415, 0.9999999999999988, 1.0], "delta_int4": 1.4953}, {"step": 112000, "form_r_trio": 0.944, "n_rogue": 6, "eff_rang": 2.23, "mag_profile": [0.0410764217376709, 0.0410764217376709, 0.036863746121525764, 0.03265107050538063, 0.03291822038590908, 0.03318537026643753, 0.047234060242772095, 0.06128275021910665, 0.04132436402142049, 0.021365977823734283, 0.026592317968606945, 0.031818658113479614, 0.03350840136408806, 0.0351981446146965, 0.05191127583384512, 0.06862440705299377, 0.07574493438005446, 0.08286546170711516, 0.08328963443636894, 0.08371380716562271, 0.09256975725293158, 0.10142570734024048, 0.5507128536701196, 0.9999999999999988, 1.0]}, {"step": 116000, "form_r_trio": 0.942, "n_rogue": 6, "eff_rang": 2.11, "mag_profile": [0.03724025562405586, 0.03724025562405586, 0.033554443158209324, 0.029868630692362785, 0.029403693974018097, 0.02893875725567341, 0.041729138232767575, 0.05451951920986174, 0.037434652447700514, 0.020349785685539246, 0.024952242150902745, 0.02955469861626625, 0.03224415332078934, 0.034933608025312424, 0.05216337926685808, 0.06939315050840378, 0.07433156669139862, 0.07926998287439345, 0.07559311017394066, 0.07191623747348785, 0.07908152043819426, 0.0862468034029007, 0.5431234017014497, 0.9999999999999988, 1.0]}, {"step": 120000, "form_r_trio": 0.94, "n_rogue": 6, "eff_rang": 1.98, "mag_profile": [0.03344586864113808, 0.03344586864113808, 0.03051126655191183, 0.027576664462685585, 0.02708973828703165, 0.026602812111377716, 0.03798037022352218, 0.04935792833566664, 0.03405413404107095, 0.01875033974647522, 0.023354704491794106, 0.027959069237113, 0.030261014588177204, 0.03256295993924141, 0.04567708820104597, 0.05879121646285057, 0.06147078610956669, 0.0641503557562828, 0.06447706744074821, 0.06480377912521362, 0.0728161036968231, 0.08082842826843262, 0.5404142141342156, 0.9999999999999988, 1.0]}, {"step": 124000, "form_r_trio": 0.939, "n_rogue": 6, "eff_rang": 1.88, "mag_profile": [0.030172297731041908, 0.030172297731041908, 0.027680975385010242, 0.025189653038978577, 0.025053375400602818, 0.02491709776222706, 0.035424762405455106, 0.04593242704868315, 0.03183600027114154, 0.01773957349359989, 0.02196434326469898, 0.026189113035798073, 0.02821014542132616, 0.030231177806854248, 0.04299690201878546, 0.055762626230716705, 0.056569814682006836, 0.05737700313329697, 0.057111816480755806, 0.056846629828214645, 0.06406624428927897, 0.07128585875034332, 0.535642929375171, 0.9999999999999988, 1.0]}, {"step": 128000, "form_r_trio": 0.938, "n_rogue": 6, "eff_rang": 1.8, "mag_profile": [0.027544846758246422, 0.027544846758246422, 0.025219660252332687, 0.022894473746418953, 0.023073340766131878, 0.023252207785844803, 0.03300994448363781, 0.0427676811814308, 0.0299006411805749, 0.01703360117971897, 0.02065021079033613, 0.024266820400953293, 0.024758844636380672, 0.025250868871808052, 0.03697359655052422, 0.04869632422924042, 0.050565676763653755, 0.052435029298067086, 0.05318405479192734, 0.05393308028578758, 0.05984417162835597, 0.06575526297092438, 0.5328776314854615, 0.9999999999999988, 1.0], "delta_int4": 2.1071}, {"step": 143000, "form_r_trio": 0.936, "n_rogue": 6, "eff_rang": 1.62, "mag_profile": [0.0206652469933033, 0.0206652469933033, 0.01931832730770111, 0.017971407622098923, 0.01777046173810959, 0.017569515854120255, 0.0247304942458868, 0.03189147263765334, 0.023301652166992433, 0.014711831696331501, 0.016930934507399797, 0.019150037318468094, 0.01938842050731182, 0.019626803696155548, 0.029897812753915773, 0.040168821811676025, 0.041675444692373276, 0.04318206757307052, 0.04229805991053581, 0.0414140522480011, 0.04565873555839061, 0.049903418868780136, 0.5249517094343894, 0.9999999999999987, 1.0], "delta_int4": 3.7113}], "ereignisse": [{"step": 1430, "name": "Warmup-Ende"}, {"step": 4000, "name": "Rogue-Ausbruch", "text": "19 Ausreisser-Dimensionen entstehen schlagartig"}, {"step": 13000, "name": "Benchmark-Reife", "text": "Von aussen wirkt das Modell ab hier fertig"}, {"step": 84000, "name": "Einrasten (Lock-in)", "text": "Form springt auf den Attraktor, Kompression beginnt — endogen, kein Schedule-Gegenstueck"}], "familien": {"pythia160m": {"rang": [[64000, 5.2], [76000, 5.33], [84000, 4.23], [92000, 3.2], [108000, 2.2], [128000, 1.8], [143000, 1.62]], "schaden": [[64000, 0.5536], [76000, 0.5991], [84000, 0.775], [92000, 0.9238], [108000, 1.4953], [128000, 2.1071], [143000, 3.7113]], "label": "Pythia-160m: spaete Klippe (3.9x)"}, "olmo1b": {"label": "OLMo-2-1B: stetiger Drift (2.8x)", "punkte": [{"tokens_b": 84, "nll_fp32": 4.9097, "eff_rang": 9.68, "delta_int4": 0.2717}, {"tokens_b": 441, "nll_fp32": 4.7994, "eff_rang": 5.88, "delta_int4": 0.3646}, {"tokens_b": 944, "nll_fp32": 5.0496, "eff_rang": 4.87, "delta_int4": 0.411}, {"tokens_b": 1469, "nll_fp32": 4.7496, "eff_rang": 4.43, "delta_int4": 0.5864}, {"tokens_b": 1972, "nll_fp32": 4.4928, "eff_rang": 4.35, "delta_int4": 0.4974}, {"tokens_b": 2475, "nll_fp32": 4.4123, "eff_rang": 4.4, "delta_int4": 0.5682}, {"tokens_b": 2999, "nll_fp32": 4.7401, "eff_rang": 4.76, "delta_int4": 0.5516}, {"tokens_b": 3503, "nll_fp32": 4.6816, "eff_rang": 4.04, "delta_int4": 0.7602}, {"tokens_b": 4001, "nll_fp32": 4.7092, "eff_rang": 3.65, "delta_int4": 0.6515}]}, "tinyllama": {"label": "TinyLlama-1.1B: immun", "punkte": [{"tokens_b": 105, "nll_fp32": 6.1216, "eff_rang": 4.51, "delta_int4": 0.0183}, {"tokens_b": 503, "nll_fp32": 8.9344, "eff_rang": 8.78, "delta_int4": 0.5153}, {"tokens_b": 1000, "nll_fp32": 5.3414, "eff_rang": 4.53, "delta_int4": -0.2189}, {"tokens_b": 1500, "nll_fp32": 4.9095, "eff_rang": 4.5, "delta_int4": -0.1394}, {"tokens_b": 2000, "nll_fp32": 5.068, "eff_rang": 4.64, "delta_int4": -0.0645}, {"tokens_b": 2500, "nll_fp32": 4.3731, "eff_rang": 5.6, "delta_int4": -0.0274}, {"tokens_b": 3000, "nll_fp32": 4.2157, "eff_rang": 2.49, "delta_int4": 0.1556}]}}, "attraktor": {"min_r_mag": 0.964, "text": "7 konvergierende Laeufe: Familie/Groesse/Daten/Praezision/Post-Training aendern die Form nicht"}, "skalenkette": [{"modell": "pythia-70m", "rang_final": 1.13, "schaden_final": 8.15}, {"modell": "pythia-160m", "rang_final": 1.62, "schaden_final": 3.71}, {"modell": "pythia-410m", "rang_final": 8.05, "schaden_final": 1.11}, {"modell": "pythia-1b", "rang_final": 7.02, "schaden_final": 0.55}]};
+const T = B.training_pythia160m;
+const N = T.length, DP = T[0].mag_profile.length;
+const LAYERS = 12, HEADS = 12, DMODEL = 768;
+const DMG = B.familien.pythia160m.schaden;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- Interpolation ---------- */
+const lerp = (a, b, u) => a + (b - a) * u;
+function at(tIdx, get) {
+  const i = Math.max(0, Math.min(N - 1, Math.floor(tIdx)));
+  const j = Math.min(N - 1, i + 1), u = tIdx - i;
+  return lerp(get(T[i]), get(T[j]), u);
+}
+function magAt(tIdx, s) {
+  const d = s * (DP - 1), di = Math.max(0, Math.min(DP - 2, Math.floor(d))), du = d - di;
+  return at(tIdx, r => lerp(r.mag_profile[di], r.mag_profile[di + 1], du));
+}
+function dmgAt(tIdx) {
+  const step = at(tIdx, r => r.step);
+  if (step <= DMG[0][0]) return { v: DMG[0][1], measured: false };
+  for (let k = 1; k < DMG.length; k++)
+    if (step <= DMG[k][0]) {
+      const [s0, v0] = DMG[k - 1], [s1, v1] = DMG[k];
+      return { v: lerp(v0, v1, (step - s0) / (s1 - s0)),
+               measured: Math.abs(step - s0) < 500 || Math.abs(step - s1) < 500 };
+    }
+  return { v: DMG[DMG.length - 1][1], measured: true };
+}
+const stepAt = tIdx => Math.round(at(tIdx, r => r.step));
+const fmt = x => Math.round(x).toLocaleString("de-DE");
+
+/* ---------- Welt ---------- */
+const LH = 170;
+const CITY_TOP = 90, CITY_BOT = CITY_TOP + LAYERS * LH;
+const yOfS = s => CITY_BOT - s * (CITY_BOT - CITY_TOP);
+const layerY = i => CITY_BOT - i * LH;
+function idxOfStep(step) {
+  for (let i = 0; i < N - 1; i++)
+    if (T[i + 1].step >= step)
+      return i + (step - T[i].step) / (T[i + 1].step - T[i].step);
+  return N - 1;
+}
+
+/* ---------- Canvas / Kamera ---------- */
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let cw = 0, ch = 0, dpr = 1;
+const cam = { x: 0, y: (CITY_TOP + CITY_BOT) / 2, scale: 0.55 };
+function resize() {
+  dpr = devicePixelRatio || 1;
+  cw = cv.clientWidth; ch = cv.clientHeight;
+  cv.width = cw * dpr; cv.height = ch * dpr;
+  fitView();
+}
+function fitView() {
+  cam.scale = Math.min(ch / (CITY_BOT - CITY_TOP + 240), 1.1);
+  cam.x = 60; cam.y = (CITY_TOP + CITY_BOT) / 2;
+}
+const w2sX = x => (x - cam.x) * cam.scale + cw / 2;
+const w2sY = y => (y - cam.y) * cam.scale + ch / 2;
+const s2wX = x => (x - cw / 2) / cam.scale + cam.x;
+const s2wY = y => (y - ch / 2) / cam.scale + cam.y;
+
+let tIdx = N - 1, playing = false;
+let timeAnim = null;
+const layers = { traffic: true, weather: true, incidents: true };
+let hover = null;
+function animTime(to, seconds) {
+  timeAnim = { from: tIdx, to, t0: performance.now(), dur: reduceMotion ? 1 : seconds * 1000 };
+}
+function tickTime(now) {
+  if (!timeAnim) return;
+  const u = Math.min(1, (now - timeAnim.t0) / timeAnim.dur);
+  tIdx = lerp(timeAnim.from, timeAnim.to, u);
+  scrub.value = tIdx;
+  if (u >= 1) { timeAnim = null; playing = false; playBtn.textContent = "▶"; }
+}
+
+/* ---------- Partikel / Ausreißer ---------- */
+const PN = 340, parts = [];
+const rand = (() => { let s = 42; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+for (let i = 0; i < PN; i++) parts.push({ s: rand(), lane: rand() * 2 - 1, det: rand() });
+const INC = [];
+for (let i = 0; i < 24; i++) INC.push({ s: 0.06 + rand() * 0.88, side: rand() > 0.5 ? 1 : -1, j: rand() });
+
+/* ---------- Zeichnen ---------- */
+const hitRects = [];
+const roadHalf = rank => 10 + rank * 7;
+
+function draw(now) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const g = ctx.createLinearGradient(0, 0, 0, ch);
+  g.addColorStop(0, "#0b0e14"); g.addColorStop(1, "#0d1119");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+
+  const rank = at(tIdx, r => r.eff_rang);
+  const dmg = dmgAt(tIdx);
+  const rogues = Math.round(at(tIdx, r => r.n_rogue));
+  const half = roadHalf(rank);
+
+  if (layers.weather && dmg.v > 0.6) {
+    const a = Math.min(0.5, (dmg.v - 0.5) / 3.4 * 0.5);
+    const wg = ctx.createRadialGradient(cw / 2, ch * 0.22, 60, cw / 2, ch * 0.3, Math.max(cw, ch) * 0.75);
+    wg.addColorStop(0, `rgba(235,104,52,${a})`);
+    wg.addColorStop(1, "rgba(235,104,52,0)");
+    ctx.fillStyle = wg; ctx.fillRect(0, 0, cw, ch);
+  }
+
+  hitRects.length = 0;
+  drawTerminal(yOfS(0) + 34, "EINGABE", "„Der Hund jagt die …“", "in");
+  drawTerminal(yOfS(1) - 64, "AUSGABE", "wahrscheinlichstes nächstes Wort: „Katze“", "out");
+
+  // Hauptleitung (Residual Stream)
+  const roadL = w2sX(-half), roadR = w2sX(half);
+  const yTop = w2sY(yOfS(1) - 30), yBot = w2sY(yOfS(0) + 30);
+  ctx.fillStyle = "#161c28";
+  ctx.fillRect(roadL, yTop, roadR - roadL, yBot - yTop);
+  ctx.strokeStyle = "#2c3648"; ctx.lineWidth = Math.max(1, 1.5 * cam.scale);
+  ctx.strokeRect(roadL, yTop, roadR - roadL, yBot - yTop);
+  const lanes = Math.max(1, Math.round(rank));
+  ctx.strokeStyle = "rgba(90,105,130,0.55)";
+  ctx.setLineDash([8 * cam.scale, 10 * cam.scale]);
+  for (let l = 1; l < lanes; l++) {
+    const lx = w2sX(-half + (2 * half) * l / lanes);
+    ctx.beginPath(); ctx.moveTo(lx, yTop); ctx.lineTo(lx, yBot); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  hitRects.push({ x: roadL, y: yTop, w: roadR - roadL, h: yBot - yTop, type: "road", low: 1 });
+
+  // Karten-Label der Hauptleitung (wie Straßenname), erscheint ab mittlerem Zoom
+  if (cam.scale > 0.7) {
+    ctx.save();
+    ctx.translate(w2sX(0), w2sY((CITY_TOP + CITY_BOT) / 2 + 180));
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = "rgba(160,180,210,0.8)";
+    ctx.font = `600 ${Math.max(10, 12 * cam.scale)}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.fillText("Residual Stream · die Hauptleitung", 0, 4);
+    ctx.restore();
+  }
+
+  for (let i = 0; i < LAYERS; i++) drawLayer(i, half);
+  if (layers.traffic) drawTraffic(now, half);
+
+  if (layers.incidents && rogues > 0) {
+    const show = Math.min(rogues, INC.length);
+    for (let k = 0; k < show; k++) {
+      const p = INC[k];
+      const x = w2sX(p.side * (half + 26 + p.j * 10)), y = w2sY(yOfS(p.s));
+      drawWarn(x, y);
+      hitRects.push({ x: x - 10, y: y - 10, w: 20, h: 20, type: "incident", n: rogues });
+    }
+  }
+
+  // Übersichts-Label (nur weit draußen, wie Ländernamen)
+  if (cam.scale < 0.38) {
+    ctx.fillStyle = "rgba(200,215,235,0.85)";
+    ctx.font = `700 ${Math.max(13, 26 * cam.scale)}px system-ui`;
+    ctx.textAlign = "left";
+    ctx.fillText("12 Schichten", w2sX(240), w2sY((CITY_TOP + CITY_BOT) / 2));
+    ctx.font = `400 ${Math.max(10, 18 * cam.scale)}px system-ui`;
+    ctx.fillStyle = "rgba(143,160,184,0.8)";
+    ctx.fillText("reinzoomen für Details", w2sX(240), w2sY((CITY_TOP + CITY_BOT) / 2 + 60));
+  }
+
+  drawStatus(rank, dmg, rogues);
+  document.getElementById("zlevel").textContent =
+    cam.scale < 0.38 ? "Ansicht: ganzes Modell" :
+    cam.scale < 1.6 ? "Ansicht: Schichten" : "Ansicht: Bauteile";
+}
+
+function drawTerminal(yw, big, small, kind) {
+  const x0 = w2sX(-190), x1 = w2sX(190);
+  const y0 = w2sY(yw), h = 34 * cam.scale;
+  ctx.fillStyle = "#1c2433"; ctx.strokeStyle = "#33405a";
+  roundRect(x0, y0, x1 - x0, h, 7 * cam.scale, true, true);
+  if (cam.scale > 0.32) {
+    ctx.fillStyle = "#c8d2e0";
+    ctx.font = `700 ${Math.max(9, 11 * cam.scale)}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.fillText(big + (cam.scale > 0.55 ? " · " + small : ""), (x0 + x1) / 2, y0 + h / 2 + 4 * cam.scale);
+  }
+  hitRects.push({ x: x0, y: y0, w: x1 - x0, h, type: kind });
+}
+
+function drawLayer(i, half) {
+  const yB = layerY(i), yT = yB - LH;
+  const sMid = 1 - (yB - LH / 2 - CITY_TOP) / (CITY_BOT - CITY_TOP);
+  const mag = magAt(tIdx, Math.min(1, Math.max(0, sMid)));
+
+  const dx0 = w2sX(-430), dx1 = w2sX(430);
+  const dy0 = w2sY(yT + 12), dy1 = w2sY(yB - 12);
+  ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.016)" : "rgba(255,255,255,0.03)";
+  ctx.fillRect(dx0, dy0, dx1 - dx0, dy1 - dy0);
+
+  const attn = { x: -350, y: yT + 34, w: 190, h: LH - 74 };
+  const mlp  = { x: 165,  y: yT + 34, w: 190, h: LH - 74 };
+  drawRamp(-half, attn.x + attn.w, yT + LH * 0.32, yT + LH * 0.68, mag, -1);
+  drawRamp(half, mlp.x, yT + LH * 0.32, yT + LH * 0.68, mag, 1);
+  drawModule(attn, "#233150", "#5c86d6", "Attention", "verknüpft Wörter", i, "attn", mag);
+  drawModule(mlp, "#2b2347", "#8f7ae0", "MLP", "Wissensspeicher", i, "mlp", mag);
+
+  if (cam.scale > 0.42) {
+    ctx.fillStyle = "rgba(143,160,184,0.85)";
+    ctx.font = `600 ${Math.max(9, 12 * cam.scale)}px system-ui`;
+    ctx.textAlign = "left";
+    ctx.fillText(`Schicht ${i + 1}`, w2sX(-430) + 8, w2sY(yT + 34));
+  }
+  const bx = w2sX(half) + 5, by0 = w2sY(yT + 20), by1 = w2sY(yB - 20);
+  ctx.fillStyle = `rgba(102,184,255,${0.15 + mag * 0.8})`;
+  ctx.fillRect(bx, Math.min(by0, by1), 4 * cam.scale, Math.abs(by1 - by0));
+
+  hitRects.push({ x: dx0, y: dy0, w: dx1 - dx0, h: dy1 - dy0, type: "layer", i, mag, low: 2 });
+}
+
+function drawModule(m, fill, stroke, name, sub, i, kind, mag) {
+  const x = w2sX(m.x), y = w2sY(m.y), w = m.w * cam.scale, h = m.h * cam.scale;
+  ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1, 1.4 * cam.scale);
+  roundRect(x, y, w, h, 8 * cam.scale, true, true);
+  if (cam.scale > 0.5) {
+    ctx.fillStyle = "#dbe4f0";
+    ctx.font = `700 ${Math.max(9, 11.5 * cam.scale)}px system-ui`;
+    ctx.textAlign = "center";
+    const cy = y + (cam.scale > 1.6 ? h * 0.16 : h / 2 - 2 * cam.scale);
+    ctx.fillText(name, x + w / 2, cy);
+    if (cam.scale > 0.85) {
+      ctx.fillStyle = "#8fa0b8";
+      ctx.font = `400 ${Math.max(8, 9.5 * cam.scale)}px system-ui`;
+      ctx.fillText(sub, x + w / 2, cy + 13 * cam.scale);
+    }
+  }
+  if (cam.scale > 1.6) {
+    if (kind === "attn") {
+      const cols = 4, rows = 3, pw = w / (cols + 1.4), ph = h / (rows + 3.2);
+      for (let k = 0; k < HEADS; k++) {
+        const cxk = x + w * 0.12 + (k % cols) * pw * 1.12;
+        const cyk = y + h * 0.4 + Math.floor(k / cols) * ph * 1.3;
+        ctx.fillStyle = `rgba(102,184,255,${0.25 + 0.5 * ((k * 37 % 10) / 10) * mag})`;
+        roundRect(cxk, cyk, pw, ph, 3 * cam.scale, true, false);
+      }
+      if (cam.scale > 1.9) {
+        ctx.fillStyle = "#9aa8c0"; ctx.font = `${Math.max(8, 9.5 * cam.scale)}px system-ui`;
+        ctx.fillText("12 Köpfe · je ein Blickwinkel", x + w / 2, y + h * 0.94);
+      }
+    } else {
+      ctx.strokeStyle = "rgba(143,122,224,0.5)";
+      for (let k = 0; k < 9; k++) {
+        const fx = x + w * (0.12 + 0.76 * k / 8);
+        ctx.beginPath(); ctx.moveTo(x + w / 2, y + h * 0.34);
+        ctx.lineTo(fx, y + h * 0.84); ctx.stroke();
+      }
+      if (cam.scale > 1.9) {
+        ctx.fillStyle = "#9aa8c0"; ctx.font = `${Math.max(8, 9.5 * cam.scale)}px system-ui`;
+        ctx.textAlign = "center";
+        ctx.fillText("768 → 3072 → 768 Kanäle", x + w / 2, y + h * 0.95);
+      }
+    }
+  }
+  hitRects.push({ x, y, w, h, type: kind, i, mag });
+}
+
+function drawRamp(xRoad, xMod, y0, y1, mag, side) {
+  ctx.strokeStyle = `rgba(102,184,255,${0.12 + mag * 0.35})`;
+  ctx.lineWidth = Math.max(1, 5 * cam.scale);
+  ctx.beginPath();
+  ctx.moveTo(w2sX(xRoad), w2sY(y0));
+  ctx.bezierCurveTo(w2sX(xRoad + side * 60), w2sY(y0), w2sX(xMod - side * 40), w2sY(y0),
+                    w2sX(xMod), w2sY((y0 + y1) / 2 - 14));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w2sX(xMod), w2sY((y0 + y1) / 2 + 14));
+  ctx.bezierCurveTo(w2sX(xMod - side * 40), w2sY(y1), w2sX(xRoad + side * 60), w2sY(y1),
+                    w2sX(xRoad), w2sY(y1));
+  ctx.stroke();
+}
+
+let lastNow = 0;
+function drawTraffic(now, half) {
+  const dt = reduceMotion ? 0 : Math.min(0.05, (now - lastNow) / 1000);
+  for (const p of parts) {
+    const m = magAt(tIdx, p.s);
+    p.s += dt * (0.008 + m * 0.075) * (0.7 + p.det * 0.6);
+    if (p.s > 1) p.s -= 1;
+    const y = w2sY(yOfS(p.s));
+    if (y < -20 || y > ch + 20) continue;
+    const x = w2sX(p.lane * half * 0.8);
+    const r = Math.max(1.2, (1.6 + m * 2.6) * cam.scale);
+    ctx.fillStyle = `rgba(${Math.round(140 + m * 115)},${Math.round(195 + m * 60)},255,${0.25 + m * 0.75})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+  if (reduceMotion)
+    for (let k = 0; k < 60; k++) {
+      const s = k / 60, m = magAt(tIdx, s);
+      ctx.fillStyle = `rgba(102,184,255,${0.1 + m * 0.6})`;
+      ctx.fillRect(w2sX(-half * 0.8), w2sY(yOfS(s)), (half * 1.6) * cam.scale, 2);
+    }
+}
+
+function drawWarn(x, y) {
+  const r = Math.max(5, 8 * cam.scale);
+  ctx.fillStyle = "rgba(250,178,25,0.95)";
+  ctx.beginPath();
+  ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.9, y + r * 0.7); ctx.lineTo(x - r * 0.9, y + r * 0.7);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#1a1a19";
+  ctx.font = `bold ${Math.max(7, r)}px system-ui`;
+  ctx.textAlign = "center";
+  ctx.fillText("!", x, y + r * 0.45);
+}
+
+function roundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) ctx.fill(); if (stroke) ctx.stroke();
+}
+
+function drawStatus(rank, dmg, rogues) {
+  document.getElementById("status").innerHTML =
+    `Trainingsstand: Schritt <b>${fmt(stepAt(tIdx))}</b> / 143.000<br>` +
+    `Breite der Hauptleitung (eff. Rang): <b>${rank.toFixed(1)}</b><br>` +
+    `4-Bit-Fehlerzuwachs: <b>${dmg.v.toFixed(2)}</b>${dmg.measured ? "" : " <span style='opacity:.6'>(interpoliert)</span>"}<br>` +
+    `Ausreißer-Kanäle: <b>${rogues}</b>`;
+  document.getElementById("tstep").textContent = "Schritt " + fmt(stepAt(tIdx));
+}
+
+/* ---------- Ortskarten (Klick-Inspektion) ---------- */
+const PLACES = {
+  road: () => ({
+    title: "Residual Stream", alias: "die Hauptleitung",
+    text: `Der Satz fährt als Zahlenpaket (${DMODEL} Kanäle) von unten nach oben durch das Modell.
+      Jede Schicht liest von dieser Leitung ab und schreibt ihr Ergebnis zurück — sonst gibt es
+      keinen Weg durchs Modell. Die gestrichelten Fahrspuren zeigen unsere Kernmessung: auf wie
+      viele unabhängige Arbeitsrichtungen sich der Umbau stützt (effektiver Rang).`,
+    vals: { "Fahrspuren jetzt": at(tIdx, r => r.eff_rang).toFixed(1),
+            "… bei Schritt 84.000": "5.4", "… am Trainingsende": "1.6" },
+    src: "Weniger Spuren = zerbrechlicher beim Verkleinern (Zusammenhang: ρ = −0.96, Studie 25)." }),
+  layer: h => {
+    const st = stabilSeit(h.i);
+    return {
+    title: `Schicht ${h.i + 1} von 12`, alias: "eine Etage des Modells",
+    text: `Jede Schicht verfeinert das Verständnis des Satzes ein Stück: erst grobe Wortbedeutung,
+      in der Mitte Zusammenhänge, oben die Vorbereitung des nächsten Wortes. Die Leuchtmarke rechts
+      an der Hauptleitung zeigt, wie stark diese Schicht gerade umbaut. Ihren kompletten Verlauf
+      über das Training zeigt die Kartenebene „Leiterbahnen“.`,
+    vals: { "Durchsatz jetzt": Math.round(h.mag * 100) + " %",
+            "… bei Schritt 16.000": Math.round(LSER[h.i][idxOfStep(16000) | 0] * 100) + " %",
+            "… am Trainingsende": Math.round(LSER[h.i][N - 1] * 100) + " %",
+            "Bahn stabil seit": st === null ? "baut bis zum Ende um" : "Schritt " + fmt(st) },
+    src: "Gemessen als Schrittlänge des Tiefen-Fahrplans (Studie 07)." }; },
+  attn: h => ({
+    title: "Attention", alias: "verknüpft Wörter im Satz",
+    text: `Hier schaut das Modell im Satz zurück: Welche früheren Wörter sind für das nächste Wort
+      wichtig? Bei „Der Hund jagt die …“ verbindet Attention „jagt“ mit „Hund“ — und macht „Katze“
+      wahrscheinlich. Beim Reinzoomen siehst du die 12 Köpfe: zwölf parallele Blickwinkel
+      (z.&nbsp;B. Grammatik, Bezüge, Nähe).`,
+    vals: { "Schicht": (h.i + 1) + " / 12", "Köpfe": HEADS },
+    src: "Auf Kopf-Ebene zeigen wir die Architektur; unsere Messungen setzen auf Schicht-Ebene an." }),
+  mlp: h => ({
+    title: "MLP", alias: "der Wissensspeicher",
+    text: `Das größte Bauteil jeder Schicht: Die ${DMODEL} Kanäle werden kurz auf ${DMODEL * 4}
+      aufgefächert, mit gespeichertem Wissen abgeglichen („Hunde jagen … Katzen“) und wieder
+      zusammengefaltet. Hier wohnt das meiste, was das Modell weiß.`,
+    vals: { "Schicht": (h.i + 1) + " / 12", "Kanäle": `${DMODEL} → ${DMODEL * 4} → ${DMODEL}` },
+    src: "Der späte, konzentrierte Umbau (helle Abschnitte oben) findet vor allem hier statt." }),
+  incident: h => ({
+    title: "Ausreißer-Kanal", alias: "eine überhitzte Leitung",
+    text: `Einzelne Kanäle entwickeln im Training extreme Zahlenwerte — hundertfach größer als der
+      Rest. Ein frisch gebautes Modell hat null davon; sie entstehen schlagartig um Schritt 4.000
+      und werden später teils zurückgebaut. Sie sind harmlos für das Modell selbst, aber eine
+      Falle für Speicherformate.`,
+    vals: { "Ausreißer jetzt": h.n, "bei Schritt 4.000": "19", "am Trainingsende": "6" },
+    src: "Praxisregel aus Studie 13/23: Zwischenzustände nie im f16-Format speichern (Überlauf)." }),
+  in: () => ({
+    title: "Eingabe", alias: "hier kommt der Text an",
+    text: `Jedes Wortstück wird in ein Zahlenpaket mit ${DMODEL} Kanälen übersetzt (Embedding).
+      Ab dann rechnet das Modell nur noch mit Zahlen — Sprache existiert hier drinnen nicht mehr.`,
+    vals: { "Beispiel": "„Der Hund jagt die …“", "Kanäle je Wortstück": DMODEL },
+    src: "" }),
+  out: () => ({
+    title: "Ausgabe", alias: "das nächste Wort",
+    text: `Ganz oben wird das Zahlenpaket zurück in Sprache übersetzt: eine Wahrscheinlichkeit für
+      jedes mögliche nächste Wortstück. Das wahrscheinlichste gewinnt — hier: „Katze“.
+      Mehr macht ein Sprachmodell nicht. Alles Weitere entsteht durch Wiederholung.`,
+    vals: { "Kandidaten je Schritt": "50.304 Wortstücke" },
+    src: "" }),
+};
+const place = document.getElementById("place");
+function openPlace(h) {
+  const p = PLACES[h.type](h);
+  document.getElementById("p-title").textContent = p.title;
+  document.getElementById("p-alias").textContent = p.alias;
+  document.getElementById("p-text").innerHTML = p.text;
+  const v = document.getElementById("p-vals");
+  v.innerHTML = "";
+  for (const k in p.vals) {
+    const d = document.createElement("div");
+    d.innerHTML = `<span>${k}</span><span>${p.vals[k]}</span>`;
+    v.appendChild(d);
+  }
+  document.getElementById("p-src").textContent = p.src;
+  place.style.display = "block";
+}
+document.getElementById("pclose").addEventListener("click", () => place.style.display = "none");
+
+/* ---------- Hover: nur Name (wie Karten-Label) ---------- */
+const NAME = {
+  road: ["Residual Stream", "die Hauptleitung · klicken für Details"],
+  layer: h => [`Schicht ${h.i + 1}`, "klicken für Details"],
+  attn: ["Attention", "verknüpft Wörter · klicken"],
+  mlp: ["MLP", "Wissensspeicher · klicken"],
+  incident: ["Ausreißer-Kanal", "klicken für Details"],
+  in: ["Eingabe", "klicken"], out: ["Ausgabe", "klicken"],
+};
+const tip = document.getElementById("tip");
+function showTip(e) {
+  if (!hover) return hideTip();
+  const n = typeof NAME[hover.type] === "function" ? NAME[hover.type](hover) : NAME[hover.type];
+  tip.innerHTML = `${n[0]}<small>${n[1]}</small>`;
+  tip.style.display = "block";
+  let x = e.clientX + 13;
+  if (x + tip.offsetWidth > innerWidth - 8) x = e.clientX - tip.offsetWidth - 13;
+  tip.style.left = x + "px";
+  tip.style.top = (e.clientY + 13) + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+/* ---------- Maus / Zoom ---------- */
+let drag = null, downAt = null;
+cv.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y };
+  downAt = [e.clientX, e.clientY];
+  cv.classList.add("dragging"); cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove", e => {
+  if (drag) {
+    cam.x = drag.cx - (e.clientX - drag.x) / cam.scale;
+    cam.y = drag.cy - (e.clientY - drag.y) / cam.scale;
+    return;
+  }
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  hover = null;
+  let best = 99;
+  for (let k = hitRects.length - 1; k >= 0; k--) {
+    const r = hitRects[k];
+    if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+      const pr = r.low || 0;
+      if (pr < best) { hover = r; best = pr; }
+      if (pr === 0) break;
+    }
+  }
+  cv.style.cursor = hover ? "pointer" : "grab";
+  showTip(e);
+});
+cv.addEventListener("pointerup", e => {
+  cv.classList.remove("dragging");
+  const moved = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5;
+  drag = null; downAt = null;
+  if (!moved && hover) openPlace(hover);
+});
+cv.addEventListener("pointerleave", () => { drag = null; hover = null; hideTip(); cv.classList.remove("dragging"); });
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0012);
+  const rect = cv.getBoundingClientRect();
+  const wx = s2wX(e.clientX - rect.left), wy = s2wY(e.clientY - rect.top);
+  cam.scale = Math.max(0.18, Math.min(5, cam.scale * f));
+  cam.x = wx - (e.clientX - rect.left - cw / 2) / cam.scale;
+  cam.y = wy - (e.clientY - rect.top - ch / 2) / cam.scale;
+}, { passive: false });
+
+for (const [id, key] of [["lyr-traffic", "traffic"], ["lyr-weather", "weather"], ["lyr-incidents", "incidents"]]) {
+  const b = document.getElementById(id);
+  b.addEventListener("click", () => { layers[key] = !layers[key]; b.classList.toggle("on", layers[key]); });
+}
+document.getElementById("zin").onclick = () => cam.scale = Math.min(5, cam.scale * 1.45);
+document.getElementById("zout").onclick = () => cam.scale = Math.max(0.18, cam.scale / 1.45);
+document.getElementById("zfit").onclick = fitView;
+
+/* ---------- Zeitleiste ---------- */
+const scrub = document.getElementById("scrub");
+const playBtn = document.getElementById("play");
+scrub.addEventListener("input", () => { tIdx = +scrub.value; timeAnim = null; playing = false; playBtn.textContent = "▶"; });
+playBtn.addEventListener("click", () => {
+  if (playing) { playing = false; timeAnim = null; playBtn.textContent = "▶"; return; }
+  if (tIdx > N - 1.05) tIdx = 0;
+  playing = true; playBtn.textContent = "❚❚";
+  animTime(N - 1, 38 * (N - 1 - tIdx) / (N - 1));
+});
+const pins = document.getElementById("pins");
+for (const ev of [[4000, "Ausreißer brechen aus"], [13000, "Benchmarks werden flach"], [84000, "Leitung verengt sich"]]) {
+  const d = document.createElement("div");
+  d.className = "pin";
+  d.style.left = (idxOfStep(ev[0]) / (N - 1) * 100) + "%";
+  d.textContent = ev[1];
+  pins.appendChild(d);
+}
+
+/* ---------- Leiterbahnen (Schicht-Verläufe über das Training) ---------- */
+const LSER = [];                       // LSER[layer][checkpoint] = mittlerer Durchsatz
+for (let i = 0; i < LAYERS; i++) {
+  const d0 = Math.round(i / LAYERS * (DP - 1)), d1 = Math.max(d0 + 1, Math.round((i + 1) / LAYERS * (DP - 1)));
+  LSER.push(T.map(r => {
+    let s = 0, c = 0;
+    for (let d = d0; d <= d1; d++) { s += r.mag_profile[d]; c++; }
+    return s / c;
+  }));
+}
+const STAB_EPS = 0.045;
+function stabilSeit(i) {               // erster Checkpoint, ab dem die Bahn ruhig bleibt
+  for (let k = 0; k < N - 1; k++) {
+    let ok = true;
+    for (let j = k; j < N - 1; j++)
+      if (Math.abs(LSER[i][j + 1] - LSER[i][j]) > STAB_EPS) { ok = false; break; }
+    if (ok) return T[k].step;
+  }
+  return null;
+}
+const TRW = 1000, TRH = 240, TRL = 46, TRR = 8;
+const trX = k => TRL + k / (N - 1) * (TRW - TRL - TRR);
+let trCursor = null;
+function renderTraces() {
+  const svg = document.getElementById("tr-svg");
+  svg.innerHTML = "";
+  const ns = "http://www.w3.org/2000/svg";
+  const bh = (TRH - 16) / LAYERS;
+  for (let i = 0; i < LAYERS; i++) {
+    const base = TRH - 6 - i * bh;     // Schicht 1 unten wie auf der Karte
+    const lbl = document.createElementNS(ns, "text");
+    lbl.setAttribute("x", 4); lbl.setAttribute("y", base - 2);
+    lbl.setAttribute("class", "tr-label");
+    lbl.textContent = "Schicht " + (i + 1);
+    svg.appendChild(lbl);
+    const gl = document.createElementNS(ns, "line");
+    gl.setAttribute("x1", TRL); gl.setAttribute("x2", TRW - TRR);
+    gl.setAttribute("y1", base); gl.setAttribute("y2", base);
+    gl.setAttribute("stroke", "rgba(255,255,255,0.06)");
+    svg.appendChild(gl);
+    for (let k = 0; k < N - 1; k++) {
+      const seg = document.createElementNS(ns, "line");
+      seg.setAttribute("x1", trX(k)); seg.setAttribute("x2", trX(k + 1));
+      seg.setAttribute("y1", base - LSER[i][k] * (bh + 6));
+      seg.setAttribute("y2", base - LSER[i][k + 1] * (bh + 6));
+      const instabil = Math.abs(LSER[i][k + 1] - LSER[i][k]) > STAB_EPS;
+      seg.setAttribute("stroke", instabil ? "#fab219" : "#66b8ff");
+      seg.setAttribute("stroke-width", instabil ? 2.2 : 1.7);
+      seg.setAttribute("stroke-linecap", "round");
+      svg.appendChild(seg);
+    }
+  }
+  for (const s of [0, 16000, 40000, 84000, 143000]) {
+    const t = document.createElementNS(ns, "text");
+    t.setAttribute("x", trX(idxOfStep(s))); t.setAttribute("y", 10);
+    t.setAttribute("class", "tr-label"); t.setAttribute("text-anchor", "middle");
+    t.textContent = s >= 1000 ? s / 1000 + "k" : s;
+    svg.appendChild(t);
+  }
+  trCursor = document.createElementNS(ns, "line");
+  trCursor.setAttribute("y1", 14); trCursor.setAttribute("y2", TRH - 4);
+  trCursor.setAttribute("stroke", "#fff"); trCursor.setAttribute("stroke-width", 1.2);
+  trCursor.setAttribute("opacity", 0.8);
+  svg.appendChild(trCursor);
+  svg.onpointerdown = e => {
+    const r = svg.getBoundingClientRect();
+    const k = ((e.clientX - r.left) / r.width * TRW - TRL) / (TRW - TRL - TRR) * (N - 1);
+    tIdx = Math.max(0, Math.min(N - 1, k));
+    scrub.value = tIdx; timeAnim = null; playing = false; playBtn.textContent = "▶";
+  };
+}
+document.getElementById("lyr-traces").addEventListener("click", function () {
+  const box = document.getElementById("traces");
+  box.hidden = !box.hidden;
+  this.classList.toggle("on", !box.hidden);
+  if (!box.hidden) renderTraces();
+});
+document.getElementById("tr-close").addEventListener("click", () => {
+  document.getElementById("traces").hidden = true;
+  document.getElementById("lyr-traces").classList.remove("on");
+});
+
+/* ---------- Hauptschleife ---------- */
+function frame(now) {
+  tickTime(now);
+  draw(now);
+  if (trCursor && !document.getElementById("traces").hidden)
+    trCursor.setAttribute("x1", trX(tIdx)), trCursor.setAttribute("x2", trX(tIdx));
+  lastNow = now;
+  requestAnimationFrame(frame);
+}
+addEventListener("resize", resize);
+resize();
+requestAnimationFrame(frame);
+</script>

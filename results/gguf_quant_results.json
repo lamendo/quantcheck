@@ -1,0 +1,14 @@
+{
+ "84000": {
+  "ppl_f16": 1.655,
+  "ppl_q4km": 1.716,
+  "delta_lnppl": 0.0361
+ },
+ "143000": {
+  "ppl_f16": 1.679,
+  "ppl_q4km": 1.937,
+  "delta_lnppl": 0.1424
+ },
+ "ratio_143k_zu_84k": 3.94,
+ "verdikt": "RTN-BEFUND BESTÄTIGT (GGUF-K-Quant)"
+}

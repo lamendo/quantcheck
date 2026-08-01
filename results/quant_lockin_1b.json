@@ -1,0 +1,44 @@
+{
+ "checkpoints": {
+  "64000": {
+   "nll_fp32": 4.0478,
+   "eff_rang": 6.06,
+   "nll_int8": 4.0436,
+   "delta_int8": -0.0041,
+   "nll_int4": 4.3238,
+   "delta_int4": 0.276
+  },
+  "76000": {
+   "nll_fp32": 4.018,
+   "eff_rang": 6.34,
+   "nll_int8": 4.0162,
+   "delta_int8": -0.0018,
+   "nll_int4": 4.1426,
+   "delta_int4": 0.1246
+  },
+  "84000": {
+   "nll_fp32": 3.8621,
+   "eff_rang": 6.54,
+   "nll_int8": 3.8642,
+   "delta_int8": 0.0021,
+   "nll_int4": 4.3219,
+   "delta_int4": 0.4597
+  },
+  "128000": {
+   "nll_fp32": 3.8528,
+   "eff_rang": 7.1,
+   "nll_int8": 3.8549,
+   "delta_int8": 0.002,
+   "nll_int4": 4.3008,
+   "delta_int4": 0.4479
+  },
+  "143000": {
+   "nll_fp32": 3.8827,
+   "eff_rang": 7.02,
+   "nll_int8": 3.8735,
+   "delta_int8": -0.0092,
+   "nll_int4": 4.4367,
+   "delta_int4": 0.554
+  }
+ }
+}

@@ -1,0 +1,64 @@
+{
+ "checkpoints": {
+  "64000": {
+   "nll_fp32": 3.8113,
+   "eff_rang": 4.39,
+   "nll_int8": 3.8119,
+   "delta_int8": 0.0007,
+   "nll_int4": 4.1498,
+   "delta_int4": 0.3385
+  },
+  "76000": {
+   "nll_fp32": 3.7995,
+   "eff_rang": 4.59,
+   "nll_int8": 3.8005,
+   "delta_int8": 0.0011,
+   "nll_int4": 4.2243,
+   "delta_int4": 0.4248
+  },
+  "84000": {
+   "nll_fp32": 3.8073,
+   "eff_rang": 3.32,
+   "nll_int8": 3.8094,
+   "delta_int8": 0.0021,
+   "nll_int4": 4.2378,
+   "delta_int4": 0.4305
+  },
+  "92000": {
+   "nll_fp32": 3.7988,
+   "eff_rang": 2.71,
+   "nll_int8": 3.803,
+   "delta_int8": 0.0042,
+   "nll_int4": 4.3137,
+   "delta_int4": 0.5149
+  },
+  "108000": {
+   "nll_fp32": 3.8138,
+   "eff_rang": 2.0,
+   "nll_int8": 3.8166,
+   "delta_int8": 0.0029,
+   "nll_int4": 4.6251,
+   "delta_int4": 0.8113
+  },
+  "128000": {
+   "nll_fp32": 3.768,
+   "eff_rang": 1.65,
+   "nll_int8": 3.7716,
+   "delta_int8": 0.0035,
+   "nll_int4": 5.6084,
+   "delta_int4": 1.8404
+  },
+  "143000": {
+   "nll_fp32": 3.7935,
+   "eff_rang": 1.51,
+   "nll_int8": 3.8089,
+   "delta_int8": 0.0154,
+   "nll_int4": 6.7282,
+   "delta_int4": 2.9347
+  }
+ },
+ "int4_schaden_pre_mean": 0.3979,
+ "int4_schaden_post_mean": 1.5253,
+ "relative_aenderung": 2.833,
+ "verdikt": "LOCK-IN-RELEVANT"
+}

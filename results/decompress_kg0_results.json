@@ -1,0 +1,32 @@
+{
+ "repo": "EleutherAI/pythia-160m",
+ "rev": "step143000",
+ "steps": 300,
+ "tokens_trainiert": 1228800,
+ "baseline": {
+  "nll_fp32": 4.8131,
+  "eff_rang": 1.68,
+  "delta_int4": 3.7113
+ },
+ "arme": {
+  "0.03": {
+   "nll_fp32": 5.4073,
+   "eff_rang": 1.58,
+   "delta_int4": 2.8846,
+   "pass_d0": false
+  },
+  "0.1": {
+   "nll_fp32": 5.3393,
+   "eff_rang": 1.76,
+   "delta_int4": 3.0005,
+   "pass_d0": false
+  },
+  "0.3": {
+   "nll_fp32": 5.4833,
+   "eff_rang": 3.02,
+   "delta_int4": 3.1125,
+   "pass_d0": false
+  }
+ },
+ "verdikt": "KG-D0 KILL (Eskalation 1000 Schritte / lam=1.0 erlaubt, dann final)"
+}
