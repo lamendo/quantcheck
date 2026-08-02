@@ -23,6 +23,10 @@ Longer read: [WRITEUP.md](WRITEUP.md) · interactive explainer:
 
 ## The observation (Pythia suite)
 
+*The numbers below are the raw record of what we measured on those three
+suites. They are the observation itself — not a claim that your model
+behaves the same. That question is exactly what the probe answers.*
+
 | Pythia-160m checkpoint | PPL f16 | PPL Q4_K_M | ΔlnPPL (damage) |
 |---|---|---|---|
 | step 84 000 | 1.655 | 1.716 | **0.036** |
@@ -152,21 +156,23 @@ PRs for cleanup, AWQ/GPTQ integration or new suites: see CONTRIBUTING.md.
 
 ```
 quantcheck/
-  rank_probe.py          # eff. rank of mean depth-update over checkpoints
-  quant_probe.py         # fp32 vs RTN-Int4/Int8 ΔNLL per checkpoint (probe corpora included)
-  gguf_probe.py          # real GGUF Q4_K_M via llama.cpp (optional)
-  suites/                # full checkpoint-suite runs: olmo, tinyllama, olmoe (MoE),
-                         # bit sweep, gguf spectrum, and the pre-registered
-                         # (failed) post-hoc decompression experiment
-  results/               # all JSONs incl. pre-registered criteria & verdicts
-  explainer/             # interactive visual explainer (self-contained HTML)
-  PREREG.md              # ledger: what was predicted before each run, incl. kills
-  WRITEUP.md             # the long-form writeup (blog draft)
-  figures/               # core result figures (generated from results/)
+  quantcheck.py          # THE entry point: one-command probe for any HF suite
+  rank_probe.py          # original research script: rank over Pythia checkpoints
+  quant_probe.py         # original research script: RTN damage per checkpoint
+  gguf_probe.py          # real GGUF Q4_K_M via llama.cpp (optional; see patches/)
+  suites/                # as-run suite scripts: olmo, tinyllama, olmoe (MoE),
+                         # bit sweep, gguf spectrum, benchmark maturity,
+                         # failed post-hoc decompression (pre-registered kill)
+  tools/                 # rank_bootstrap.py (probe robustness CIs)
+  tests/                 # dependency-light smoke tests (pytest tests/)
+  probes/                # declared probe corpora + frozen reference forms
+  results/               # as-run result JSONs incl. verdicts (never edited)
+  figures/               # plots used in the README
+  explainer/             # interactive visual explainers (self-contained HTML)
   docs/research_trail/   # original lab notes (German), as-run
-  patches/               # small env fixes needed for reproduction
-  CITATION.cff           # how to cite
-  requirements.txt
+  patches/               # env fixes needed for GGUF reproduction
+  PREREG.md              # verdict ledger incl. kills · WRITEUP.md — long-form
+  REPRODUCE.md           # one command per published number · CONTRIBUTING.md
 ```
 
 Note: code comments are partly in German — these are the actual research
