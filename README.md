@@ -75,7 +75,9 @@ requirements.txt`, then any script runs as-is; suite scripts write into
 - ❌ Not a claim about reasoning, capability, or model quality per se.
 - ❌ Not a universal law: it's a measurable regime. Confirmed on Pythia
   (4 scales) + OLMo-2-1B, refuted on TinyLlama; **community replication on
-  other suites (Amber, SmolLM, OLMo-7B…) is the explicit ask.**
+  other suites (Amber, SmolLM, OLMo-7B…) is the explicit ask** — including
+  finishing our suspended OLMoE MoE suite (4/8 checkpoints measured,
+  `suites/olmoe_suite.py` is resumable and self-contained).
 
 ## Repo layout
 

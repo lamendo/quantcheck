@@ -16,7 +16,7 @@ series, studies 07–36.
 | 7 | TinyLlama overtraining (7 ckpts, 3T tokens) | K1/K2/K3 Spearman ≥ \|0.7\| | **KILLED** — all three missed; damage ≈ 0 from 1T–3T. Not a universal law. |
 | 8 | OLMo-2-1B modern recipe (9 ckpts, 4T tokens) | Same K1/K2/K3 | **CONFIRMED** — −0.883 / +0.867 / −0.867; continuous-drift profile (2.8×), not Pythia's late cliff |
 | 9 | Post-hoc "decompression" fix (rank-restoring finetune) | Rank ≥ 3.0 AND NLL ≤ +1 % | **KILLED** (2 designs incl. clean in-distribution anchor): rank is steerable (up to 9.66) but every rank-effective setting breaks the quality band → late compression is load-bearing. **You cannot repair it after the fact; you must pick the right checkpoint.** |
-| 10 | OLMoE-1B-7B MoE suite (8 ckpts, 5T tokens) | K-M1 router-lock / K-M2 compression / K-M3 rank↔damage / K-M4 depth-schedule attractor r ≥ 0.9 | *running — verdict will be added before release* |
+| 10 | OLMoE-1B-7B MoE suite (8 ckpts, 5T tokens) | K-M1 router-lock / K-M2 compression / K-M3 rank↔damage / K-M4 depth-schedule attractor r ≥ 0.9 | **SUSPENDED at 4/8** (local machine constraints, honest partial data in `results/olmoe_partial_4of8.json`). Early read: tiny Int4 damage so far; mean routing entropy pinned at ln(64) — the pre-declared caveat held: mean usage measures the load-balancer, not specialization. Completing this suite is an explicit replication ask. |
 
 Notes on honesty conventions used throughout: level criteria instead of
 ratio-of-relatives after study 3's lesson; declared escalations only (one per
