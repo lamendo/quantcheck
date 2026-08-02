@@ -36,8 +36,12 @@ CKPTS = [  # (Repo, Tokens in Mrd.)
 
 
 def spearman(a, b):
-    ra = np.argsort(np.argsort(a)); rb = np.argsort(np.argsort(b))
-    return float(np.corrcoef(ra, rb)[0, 1])
+    try:
+        from scipy.stats import spearmanr
+        return float(spearmanr(a, b).statistic)
+    except ImportError:            # tie-naive Fallback (Original der Serie)
+        ra = np.argsort(np.argsort(a)); rb = np.argsort(np.argsort(b))
+        return float(np.corrcoef(ra, rb)[0, 1])
 
 
 def main():

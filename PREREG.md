@@ -1,8 +1,7 @@
 # Pre-registrations & verdicts
 
 Every claim in this repo was pre-registered: endpoints and kill criteria were
-written down **before** the runs. This file is the ledger — including the
-negatives. Full research trail (German): lamendo research — "Representation Observatory"
+written down **before** the runs. This file is the ledger - including the negatives. It is an **as-written internal preregistration record** (criteria were fixed before each run as part of the workflow), not an externally timestamped preregistration: the public git history begins 2026-08-01. Full research trail (German): lamendo research — "Representation Observatory"
 series, studies 07–36.
 
 | # | Study | Pre-registered criterion | Verdict |

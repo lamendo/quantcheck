@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))
 from gguf_probe import WORK, ART, BIN, probe_file, run, ppl_of  # noqa: E402
 
 QUANTS = ["q8_0", "q6_k", "q5_k_m", "q4_k_m", "q3_k_m", "q2_k"]

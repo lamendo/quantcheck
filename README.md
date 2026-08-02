@@ -1,9 +1,9 @@
 # quantcheck — pick the right checkpoint before you quantize
 
 **TL;DR:** Late in LM pretraining, models keep the same benchmark scores but
-become dramatically more fragile to 4-bit quantization. We trace this to a
-measurable internal event (depth-schedule rank compression after a "lock-in"
-transition) and provide a cheap, label-free probe that tells you **which
+become dramatically more fragile to 4-bit quantization. We link this to a
+measurable internal correlate (depth-schedule rank compression after a
+"lock-in" transition) and provide a cheap, label-free probe that tells you **which
 checkpoint to quantize** — up to ~4× less Q4 damage at equal quality.
 
 ![Pythia-160m: rank compresses after lock-in, Int4 damage follows](figures/pythia160m_lockin.png)
@@ -23,7 +23,7 @@ Longer read: [WRITEUP.md](WRITEUP.md) · interactive explainer:
 
 - Damage onset coincides with an endogenous training event ("lock-in") that
   has no counterpart in the LR schedule and is invisible to loss/benchmarks.
-- Mechanism candidate: post-lock-in **rank compression** of the mean depth
+- Candidate mechanism (correlate, not proven cause): post-lock-in **rank compression** of the mean depth
   update ("schedule"); Spearman(rank, Int4 damage) = −0.96 (160m) / −0.86 (410m).
 - Replicated: **4 model scales (70m/160m/410m/1b)** × full quant spectrum —
   RTN 2–8 bit AND production GGUF Q2_K…Q8_0 (checkpoint-damage ratio
@@ -36,6 +36,21 @@ Longer read: [WRITEUP.md](WRITEUP.md) · interactive explainer:
   4T tokens: rank compresses continuously 9.7 → 3.7, Int4 damage rises
   0.27 → 0.76 peak (2.8×), rank↔damage ρ = −0.87. Milder than Pythia's
   cliff, same direction, same probe.
+
+## What was actually run (exact matrix)
+
+| Family | Scales | RTN Int4/Int8 | RTN 2-8 bit | real GGUF | probe |
+|---|---|---|---|---|---|
+| Pythia | 70m / 160m / 410m / 1b (checkpoints) | yes, all | 160m only | 160m (Q4_K_M + Q2_K...Q8_0) | DE + EN (160m) |
+| OLMo-2-1B | 1 size, 9 ckpts / 4T tokens | Int4 | - | - | DE |
+| TinyLlama-1.1B | 1 size, 7 ckpts / 3T tokens | Int4 | - | - | DE |
+| OLMoE-1B-7B (MoE) | 1 size, 4/8 ckpts (suspended) | Int4 | - | - | DE |
+
+Raw effective-rank values are only strictly comparable *within* a family
+(the upper bound scales with depth); cross-scale statements are directional.
+The "benchmarks stay flat" side of the claim reproduces via
+`suites/benchmark_maturity.py` from EleutherAI's published per-checkpoint
+evals (`results/pythia_benchmark_maturity.json`).
 
 ## Usage
 
@@ -54,8 +69,7 @@ python quant_probe.py --hf-model EleutherAI/pythia-160m --probe en
 #    before rank compression exceeds your damage budget.
 ```
 
-Everything is self-contained: probe corpora live in `probes/` (DE: 31 texts,
-EN: 40), the frozen cross-family reference forms too. `pip install -r
+Everything is self-contained: probe corpora live in `probes/` (DE: 31 texts, EN: 20), the frozen cross-family reference forms too. `pip install -r
 requirements.txt`, then any script runs as-is; suite scripts write into
 `results/`.
 
@@ -102,6 +116,14 @@ quantcheck/
 
 Note: code comments are partly in German — these are the actual research
 scripts, published as-run. Cleanup PRs welcome; numbers won't change.
+
+## AI contribution & validation status
+
+Research direction, decisions, verdicts and publication: Jan R.
+Implementation, experiment execution and analysis: heavily AI-assisted
+(Claude; visible as co-author in the commit history). The results have not
+yet been independently peer-validated - replication and critique are the
+explicit purpose of this release. Command-per-result guide: [REPRODUCE.md](REPRODUCE.md).
 
 ## Provenance & method
 

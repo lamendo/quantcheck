@@ -37,8 +37,12 @@ N_PROFILE = 25
 
 
 def spearman(a, b):
-    ra = np.argsort(np.argsort(a)); rb = np.argsort(np.argsort(b))
-    return float(np.corrcoef(ra, rb)[0, 1])
+    try:
+        from scipy.stats import spearmanr
+        return float(spearmanr(a, b).statistic)
+    except ImportError:            # tie-naive Fallback (Original der Serie)
+        ra = np.argsort(np.argsort(a)); rb = np.argsort(np.argsort(b))
+        return float(np.corrcoef(ra, rb)[0, 1])
 
 
 def fahrplan_profil(model, tok, texts, n_texts=8):
@@ -80,8 +84,12 @@ def main():
     torch.set_num_threads(max(4, torch.get_num_threads() - 2))
     texts = probe_texts()
     part = ART / "moe_partial.jsonl"
-    rows = ([json.loads(l) for l in part.read_text(encoding="utf-8").splitlines() if l.strip()]
-            if part.exists() else [])
+    if part.exists():
+        rows = [json.loads(l) for l in part.read_text(encoding="utf-8").splitlines() if l.strip()]
+    elif (ART / "olmoe_partial_4of8.json").exists():   # publizierter Zwischenstand
+        rows = json.loads((ART / "olmoe_partial_4of8.json").read_text(encoding="utf-8"))["checkpoints"]
+    else:
+        rows = []
     done = {r["tokens_b"] for r in rows}
     tok = AutoTokenizer.from_pretrained(REPO)
     for rev, tokens in CKPTS:

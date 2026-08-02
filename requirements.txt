@@ -1,4 +1,5 @@
 torch>=2.4
-transformers>=4.45
+transformers>=5.0  # scripts use the v5 dtype= kwarg; see requirements-lock.txt for as-run versions
 numpy
+scipy
 datasets  # only for suites/decompress_*
