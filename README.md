@@ -52,6 +52,26 @@ The "benchmarks stay flat" side of the claim reproduces via
 `suites/benchmark_maturity.py` from EleutherAI's published per-checkpoint
 evals (`results/pythia_benchmark_maturity.json`).
 
+## Run it on YOUR suite — one command
+
+```bash
+pip install -r requirements.txt
+
+# what checkpoint revisions exist?
+python quantcheck.py --model allenai/OLMo-2-0425-1B --list-revisions
+
+# measure 8 evenly spaced checkpoints, get a regime verdict + paste-ready report
+python quantcheck.py --model <any-hf-model-with-checkpoint-revisions>     --auto-revisions 8 --issue-text
+```
+
+That's the whole ask: if you have GPU time and a checkpoint suite (or train
+your own models), run this and [post the block as a replication
+issue](../../issues/new?template=replication-report.md). The CLI resumes
+after interruption, records your environment in the report, and labels the
+regime (late-cliff / drift / flat) with declared v0 heuristics. Example
+output: `results/example_quantcheck_report.json` — its numbers reproduce
+the published Pythia values exactly (same code path).
+
 ## Usage
 
 ```bash
@@ -79,8 +99,8 @@ Honest audience statement: the checkpoint-picking rule needs **checkpoint
 suites** — it serves model trainers, finetuners, and suite publishers
 (Pythia/OLMo-style). If you only have a final checkpoint, this repo tells
 you *why* your Q4 might hurt and what to ask your model provider for, but
-it cannot pick a better checkpoint for you. This is a **research artifact
-with runnable probes**, published as-run — not a polished product tool.
+it cannot pick a better checkpoint for you. This repo is a **research artifact plus a one-command probe CLI**
+(`quantcheck.py`) — the research scripts are published as-run.
 
 ## What this is / isn't
 

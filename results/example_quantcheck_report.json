@@ -1,0 +1,97 @@
+{
+ "schema_version": "quantcheck-report-v1",
+ "model": "EleutherAI/pythia-160m",
+ "revisions": [
+  "step84000",
+  "step143000"
+ ],
+ "bits": [
+  4
+ ],
+ "probe": "de",
+ "n_texts": 31,
+ "checkpoints": [
+  {
+   "revision": "step84000",
+   "nll_fp": 4.5949,
+   "eff_rank": 4.628,
+   "eff_rank_norm": 0.3857,
+   "n_transitions": 12,
+   "profile": [
+    0.1883,
+    0.1642,
+    0.1401,
+    0.1351,
+    0.1345,
+    0.1816,
+    0.2561,
+    0.2523,
+    0.1546,
+    0.0841,
+    0.0859,
+    0.0878,
+    0.0908,
+    0.0939,
+    0.1132,
+    0.1342,
+    0.1582,
+    0.1833,
+    0.2019,
+    0.2151,
+    0.2469,
+    0.3115,
+    0.4173,
+    0.7086,
+    1.0
+   ],
+   "delta_int4": 0.775
+  },
+  {
+   "revision": "step143000",
+   "nll_fp": 4.8131,
+   "eff_rank": 1.677,
+   "eff_rank_norm": 0.1398,
+   "n_transitions": 12,
+   "profile": [
+    0.0228,
+    0.0215,
+    0.0203,
+    0.0196,
+    0.0191,
+    0.0234,
+    0.0306,
+    0.0307,
+    0.022,
+    0.0164,
+    0.0186,
+    0.0207,
+    0.0208,
+    0.0209,
+    0.03,
+    0.04,
+    0.0446,
+    0.047,
+    0.0469,
+    0.0446,
+    0.0446,
+    0.049,
+    0.1315,
+    0.5657,
+    1.0
+   ],
+   "delta_int4": 3.7113
+  }
+ ],
+ "verdict": {
+  "label": "report-only",
+  "reason": "only 2 points (need >= 5)"
+ },
+ "environment": {
+  "torch": "2.5.1+cu121",
+  "transformers": "5.2.0",
+  "device": "NVIDIA GeForce RTX 3070",
+  "dtype": "float32",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "timestamp_utc": "2026-08-02T13:39:40+00:00"
+ }
+}

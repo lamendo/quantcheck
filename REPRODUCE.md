@@ -35,6 +35,7 @@ One command per published result. All scripts write JSON into `results/`
 | `results/pythia_benchmark_maturity.json` (the "benchmarks flat" side) | `python suites/benchmark_maturity.py` (fetches EleutherAI's published per-checkpoint evals from github.com/EleutherAI/pythia) |
 | `results/decompress_kg0*.json` (failed post-hoc repair) | `python suites/decompress_kg0.py`, then `python suites/decompress_kg0b.py` |
 | `results/rank_bootstrap.json` (probe robustness, bootstrap CIs) | `python tools/rank_bootstrap.py` |
+| `results/example_quantcheck_report.json` (CLI example, matches published 160m values) | `python quantcheck.py --model EleutherAI/pythia-160m --revisions step84000,step143000 --bits 4 --dtype fp32` |
 | `figures/*.png` | regenerated from `results/` (plot code trivial; open an issue if you want it shipped) |
 
 ## Known reproduction caveats (honest list)
