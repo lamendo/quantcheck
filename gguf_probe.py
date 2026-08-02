@@ -1,8 +1,10 @@
-"""GGUF-Härtung: echter Q4_K_M-Schaden bei Checkpoint 84k vs 143k (Pythia-160m).
+"""GGUF probe: real Q4_K_M damage via llama.cpp (checkpoint 84k vs 143k).
 
-Vorregistriert: RTN-Befund bestätigt, wenn ΔlnPPL(Q4_K_M vs f16) bei 143k
-mindestens 2× so groß ist wie bei 84k. Sondenkorpus deutsch (deklariert,
-konsistent zum RTN-Test).
+Converts checkpoints to f16 GGUF, quantizes to Q4_K_M, measures perplexity
+with llama-perplexity on the declared probe. Pre-registered: the RTN finding
+is confirmed if delta-lnPPL at 143k is >= 2x the value at 84k. Requires a
+llama.cpp build (env QUANTCHECK_LLAMACPP / _BIN; see REPRODUCE.md and
+patches/). Inline comments partly German (as-run).
 """
 from __future__ import annotations
 

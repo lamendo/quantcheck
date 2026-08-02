@@ -1,17 +1,11 @@
-"""Entstehungsgeschichte: Wann lernt ein Transformer den Fahrplan?
+"""Rank probe: effective rank of the mean depth-update across checkpoints.
 
-Pythia-160m (EleutherAI, öffentliche Checkpoints) über 12 Trainingsstände:
-step0 (Init) … step143000 (final). Identische 31 Prompt-Texte (Pythia-
-Tokenizer, prefill-only, kein Chat-Template — Basismodell).
-
-Messgrößen je Checkpoint:
-  form_r_final   Korrelation der ‖μ(t)‖-Form zum FINALEN Checkpoint
-  form_r_trio    Korrelation zur Konsens-Form des trainierten Trios
-                 (Qwen/SmolLM2/Qwythos) — entsteht die CROSS-FAMILIEN-Form?
-  n_rogue        # Dims mit Varianzanteil > 1 % (irgendeine Tiefe)
-  eff_rang_mu    effektiver Rang der μ-Matrix (Kompression)
-  curv_r_final   Krümmungsprofil-Korrelation zum finalen Checkpoint
-  mag_profile    die Form selbst (für den Report)
+For each checkpoint: run the declared probe texts (probes/probe_de.json),
+collect hidden states, form the mean depth-update matrix mu (layers-1 x
+hidden), and report its effective rank, the depth profile shape, rogue-dim
+count, and form correlations (to the final checkpoint and to the frozen
+cross-family consensus form in probes/trio_consensus_mag.json).
+Label-free, forward passes only. Inline comments partly German (as-run).
 """
 from __future__ import annotations
 

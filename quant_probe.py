@@ -1,15 +1,11 @@
-"""Quantisierungs-Robustheit × Lock-in — zählt die späte Reorganisation für Q4?
+"""Quant probe: RTN Int4/Int8 damage (delta NLL) per checkpoint vs fp32.
 
-Design (vorregistriert):
-  Checkpoints Pythia-160m: 64k · 76k · 84k(Lock) · 92k · 108k · 128k · 143k
-  je Checkpoint: NLL auf Sondenkorpus (31 Texte) in fp32, dann Gewichte
-  RTN-quantisiert (Int4 per-Output-Kanal, symmetrisch; alle nn.Linear),
-  NLL erneut. Schaden = ΔNLL = NLL_q − NLL_fp32. Int8 = Kontrolle (≈0 erwartet).
-  VERDIKT „Lock-in-relevant": mittlerer Int4-Schaden PRE (64k–84k) vs POST
-  (92k–143k) unterscheidet sich um ≥20 % relativ UND der Verlauf verschiebt
-  sich am Fenster monoton. Sonst: negativ (Schaden lock-in-unabhängig).
-  Deklaration: Weight-RTN ist ein Proxy (GGUF-K-Quants sind feiner);
-  Aktivierungs-Quantisierung ist NICHT abgedeckt.
+Per checkpoint: NLL on the declared probe corpus in fp32, then weights
+RTN-quantized (per-output-channel, symmetric, all nn.Linear), NLL again.
+Damage = NLL_q - NLL_fp32; Int8 serves as a near-zero control. Declared
+proxy: weight-RTN (production K-quants are finer; activation quantization
+not covered). Pre-registered verdict logic for the Pythia-160m lock-in
+window is included. Inline comments partly German (as-run).
 """
 from __future__ import annotations
 

@@ -73,9 +73,22 @@ Everything is self-contained: probe corpora live in `probes/` (DE: 31 texts, EN:
 requirements.txt`, then any script runs as-is; suite scripts write into
 `results/`.
 
+## Who this is for — and who it isn't for
+
+Honest audience statement: the checkpoint-picking rule needs **checkpoint
+suites** — it serves model trainers, finetuners, and suite publishers
+(Pythia/OLMo-style). If you only have a final checkpoint, this repo tells
+you *why* your Q4 might hurt and what to ask your model provider for, but
+it cannot pick a better checkpoint for you. This is a **research artifact
+with runnable probes**, published as-run — not a polished product tool.
+
 ## What this is / isn't
 
 - ✅ A label-free, forward-pass-only probe (no benchmarks, no training).
+- ✅ **Probe robustness quantified:** bootstrap over probe-text subsets
+  (2000 resamples) gives disjoint 95% intervals for the headline
+  checkpoints — 84k rank 4.23 [4.10, 4.42] vs 143k 1.62 [1.60, 1.64]
+  (`results/rank_bootstrap.json`, `tools/rank_bootstrap.py`).
 - ✅ Reproducible: all scripts, all numbers, all pre-registrations included.
 - ✅ **Replicated on a modern 2025 recipe:** OLMo-2-1B (9 checkpoints,
   84B–4T tokens): all three pre-registered criteria hit (ρ tokens↔rank
