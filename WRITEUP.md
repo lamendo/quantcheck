@@ -1,24 +1,26 @@
-# Write-up-Entwurf (EN, Blog/HF-Community-Post) — „Don't ship your last checkpoint"
+# An observation about late pretraining and 4-bit fragility — and an open call for measurements
 
-**Status: ENTWURF — Zahlen der Härtungsläufe (160m-EN, 70m, 1b) werden nach
-Abschluss eingetragen [TBD-Markierungen]. Veröffentlichung erst nach Jans
-Freigabe von Text, Repo-Namen und Lizenz.**
+**Status: v1 (2026-08-02).** This is an exploratory write-up of what we
+could measure on one consumer GPU — not a finished finding. We lack the
+resources for more families, larger models and modern calibration quants.
+Everything needed to check or extend this is in the repo; one command
+suffices. Please measure and report.
 
 ---
 
-## Don't ship your last checkpoint: late pretraining silently trades quantization robustness for nothing you can benchmark
-
-**TL;DR.** On the Pythia suite, zero-shot benchmarks saturate early
-(~step 13k of 143k). But if you quantize to 4 bit, the *final* checkpoint is
-the worst one you can pick: Q4_K_M damage at step 143k is **3.9×** the damage
-at step 84k, at essentially equal fp16 quality. The onset coincides with a
-measurable internal transition ("lock-in") followed by rank compression of
-the model's mean depth-update — an event invisible to loss, LR schedule and
-benchmarks. We provide a cheap forward-pass probe to find the sweet spot.
+**TL;DR.** On the checkpoint suites we could afford to measure, we observed:
+on Pythia, zero-shot benchmarks saturate early (~step 13k of 143k), but the
+*final* checkpoint is the worst one to quantize — Q4_K_M damage at step 143k
+is **3.9x** the damage at step 84k at essentially equal fp16 quality, and the
+onset coincides with a measurable internal transition ("lock-in") followed by
+rank compression of the mean depth-update. The pattern replicates on OLMo-2-1B
+(different shape) and is **absent** on TinyLlama — a regime, not a law, and
+correlational, not proven causal. The forward-pass probe that measures it
+runs on any HF checkpoint suite.
 
 ### 1 · Setup
-Pythia-160m/410m [TBD: +70m, +1b], public checkpoints. Probe corpus:
-fixed 31-prompt set [TBD: EN probe replication]. Damage metric: ΔNLL
+Pythia-70m/160m/410m/1b, public checkpoints. Probe corpus: fixed 31-prompt
+set (DE; EN replication with 20 prompts on 160m). Damage metric: ΔNLL
 (fp32 vs RTN-Int4; Int8 as null control ≈ 0 everywhere) and ΔlnPPL
 (f16-GGUF vs Q4_K_M via llama.cpp) — both pre-registered.
 
@@ -54,11 +56,13 @@ fixed 31-prompt set [TBD: EN probe replication]. Damage metric: ΔNLL
   BitNet-style 1.58-bit is *training-time* quantization — our findings
   suggest one reason QAT works: it never enters the late fragility regime.
 
-### 3 · Practical rule
-For 4-bit deployment of small LMs: **pick the earliest checkpoint after
-benchmark maturity and before rank compression exceeds your damage budget.**
-Our probe (forward passes only, no labels) locates that window; on Pythia-160m
-it's roughly steps 80–95k — same benchmarks, ~4× less Q4 damage than final.
+### 3 · Working rule (on the suites where the regime appears)
+If you have intermediate checkpoints and deploy 4-bit: **prefer the earliest
+checkpoint after benchmark maturity, before rank compression exceeds your
+damage budget.** On Pythia-160m that window is roughly steps 80–95k — same
+benchmarks, ~4x less Q4 damage than final. In TinyLlama-like regimes the rule
+is a no-op (nothing to avoid). Whether YOUR run has such a window is exactly
+what the probe measures — we cannot know it for you.
 
 ### 4 · Three families, three regimes
 Pre-registered replications on two further checkpoint suites:

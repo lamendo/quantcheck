@@ -1,10 +1,17 @@
-# quantcheck — pick the right checkpoint before you quantize
+# quantcheck — an observation about checkpoints and 4-bit fragility, and a probe to test it on your models
 
-**TL;DR:** Late in LM pretraining, models keep the same benchmark scores but
-become dramatically more fragile to 4-bit quantization. We link this to a
-measurable internal correlate (depth-schedule rank compression after a
-"lock-in" transition) and provide a cheap, label-free probe that tells you **which
-checkpoint to quantize** — up to ~4× less Q4 damage at equal quality.
+**What this is, honestly:** On the checkpoint suites we could measure on one
+consumer GPU (Pythia at 4 scales, OLMo-2-1B, TinyLlama), we observed that
+late pretraining can keep benchmark scores flat while 4-bit fragility grows
+sharply — on Pythia-160m the final checkpoint takes ~4x the Q4 damage of an
+equal-quality earlier one, correlating strongly with rank compression of the
+mean depth-update. On TinyLlama the effect is absent. Correlation, not proven
+causation; three suites, not the ecosystem.
+
+**What we are asking:** We lack the resources to measure more families,
+larger models, and modern calibration quants (AWQ/GPTQ). The full probe
+code, pre-registrations, negative results and raw JSONs are here — and
+running the probe on YOUR suite is one command. Please measure and report.
 
 ![Pythia-160m: rank compresses after lock-in, Int4 damage follows](figures/pythia160m_lockin.png)
 
@@ -14,7 +21,7 @@ Longer read: [WRITEUP.md](WRITEUP.md) · interactive explainer:
 [explainer/](explainer/) · full pre-registration ledger incl. negatives:
 [PREREG.md](PREREG.md) · original lab notes (German): [docs/research_trail/](docs/research_trail/)
 
-## The finding (Pythia suite)
+## The observation (Pythia suite)
 
 | Pythia-160m checkpoint | PPL f16 | PPL Q4_K_M | ΔlnPPL (damage) |
 |---|---|---|---|
@@ -125,6 +132,21 @@ it cannot pick a better checkpoint for you. This repo is a **research artifact p
   other suites (Amber, SmolLM, OLMo-7B…) is the explicit ask** — including
   finishing our suspended OLMoE MoE suite (4/8 checkpoints measured,
   `suites/olmoe_suite.py` is resumable and self-contained).
+
+## Help wanted — concretely
+
+Priorities, in order of information value:
+1. **Any modern in-house suite you own** (that is the whole point)
+2. Amber (LLM360), SmolLM/SmolLM2 checkpoints, OLMo-2-7B/13B stage-1
+3. Finishing our suspended OLMoE MoE suite (4/8 done, resumable)
+4. **AWQ / GPTQ instead of RTN** on any suite where the RTN effect shows
+   (does calibration close the gap?)
+5. Bigger probe corpora / your own probe texts (`--probe your.json`)
+
+What to report: the `--issue-text` block (rank curve + damage per revision +
+the three Spearman stats — the CLI computes all of it), via the
+[replication-report issue template](../../issues/new?template=replication-report.md).
+PRs for cleanup, AWQ/GPTQ integration or new suites: see CONTRIBUTING.md.
 
 ## Repo layout
 
