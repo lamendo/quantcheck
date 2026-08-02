@@ -98,7 +98,6 @@ quantcheck/
   patches/               # small env fixes needed for reproduction
   CITATION.cff           # how to cite
   requirements.txt
-  ANNOUNCEMENTS.md       # release notes drafts
 ```
 
 Note: code comments are partly in German — these are the actual research
